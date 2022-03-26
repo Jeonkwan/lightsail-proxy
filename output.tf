@@ -7,7 +7,7 @@ output "public_ip_address" {
 }
 
 output "username" {
-    value = var.nonroot_username
+    value = var.machine_config["nonroot_username"]
 }
 
 output "ssh_key_pair_name" {
@@ -15,11 +15,11 @@ output "ssh_key_pair_name" {
 }
 
 output "ssh-connect" {
-    value = "ssh -i ${trimsuffix(var.ssh_public_key_path, ".pub")} ${var.nonroot_username}@${aws_lightsail_static_ip.instance_ip.ip_address}"
+    value = "ssh -i ${trimsuffix(var.ssh_public_key_path, ".pub")} ${var.machine_config["nonroot_username"]}@${aws_lightsail_static_ip.instance_ip.ip_address}"
 }
 
 output "mosh-connect" {
-    value = "mosh --ssh=\"ssh -i ${trimsuffix(var.ssh_public_key_path, ".pub")}\" ${var.nonroot_username}@${aws_lightsail_static_ip.instance_ip.ip_address}"
+    value = "mosh --ssh=\"ssh -i ${trimsuffix(var.ssh_public_key_path, ".pub")}\" ${var.machine_config["nonroot_username"]}@${aws_lightsail_static_ip.instance_ip.ip_address}"
 }
 
 

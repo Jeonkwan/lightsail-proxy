@@ -45,11 +45,6 @@ variable "machine_config" {
     }
 }
 
-variable "key_pair_name" {
-    type = string
-    description = "the ssh key pair name that has been created under your lightsail account, different region uses different ssh key."
-}
-
 variable "ssh_public_key_path" {
     type = string
     description = "your ssh public key for importing to lightsail"

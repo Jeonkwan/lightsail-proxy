@@ -5,7 +5,7 @@ locals {
 data "template_file" "vm_init_script" {
   template = "${file("${path.module}/setup_ubuntu.sh.tpl")}"
   vars = {
-    username = var.nonroot_username,
+    username = var.machine_config["nonroot_username"]
   }
 }
 
