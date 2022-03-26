@@ -3,7 +3,7 @@ variable "aws_profile" {
 }
 
 variable "regions" {
-    type = "map"
+    type = map
     default = {
         singapore = "ap-southeast-1"
         japan = "ap-northeast-1"
@@ -12,11 +12,11 @@ variable "regions" {
 }
 
 variable "selected_country" {
-  type = "string"
+  type = string
 }
 
 variable "zones" {
-    type = "map"
+    type = map
     default = {
         a = "a"
         b = "b"
@@ -25,7 +25,7 @@ variable "zones" {
 }
 
 variable "selected_zone" {
-    type = "string"
+    type = string
 }
 
 variable "instance_name_prefix" {
@@ -33,11 +33,11 @@ variable "instance_name_prefix" {
 }
 
 variable "instance_customizable_name" {
-    type = "string"
+    type = string
 }
 
 variable "machine_config" {
-    type = "map"
+    type = map
     default = {
         os = "ubuntu_20_04"
         nonroot_username = "ubuntu"
@@ -46,11 +46,11 @@ variable "machine_config" {
 }
 
 variable "key_pair_name" {
-    type = "string"
+    type = string
     description = "the ssh key pair name that has been created under your lightsail account, different region uses different ssh key."
 }
 
 variable "ssh_public_key_path" {
-    type = "string"
+    type = string
     description = "your ssh public key for importing to lightsail"
 }
