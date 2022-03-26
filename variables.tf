@@ -8,6 +8,7 @@ variable "regions" {
         singapore = "ap-southeast-1"
         japan = "ap-northeast-1"
         korea = "ap-northeast-2"
+        india = "ap-south-1"
     }
 }
 
@@ -18,9 +19,10 @@ variable "selected_country" {
 variable "zones" {
     type = map
     default = {
-        a = "a"
-        b = "b"
-        c = "c"
+        a = "a" # support all
+        b = "b" # except japan
+        c = "c" # support all
+        d = "d" # support only korea, japan
     }
 }
 
