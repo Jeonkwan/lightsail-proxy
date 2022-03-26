@@ -10,7 +10,8 @@ zsh \
 mosh \
 tree \
 ipcalc \
-htop
+htop \
+uuid
 
 echo "Install Docker"
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -30,11 +31,11 @@ usermod -aG docker "$USERNAME"  # username might vary
 
 pushd /home/$USERNAME/ 
 su "$USERNAME" -c \
-"git clone https://github.com/Jeonkwan/trojan-go-caddy.git"
-su "$USERNAME" -c \
 "curl -s \"https://get.sdkman.io\" | bash"
 su "$USERNAME" -c \
 "sh -c \"$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\""
+su "$USERNAME" -c \
+"git clone https://github.com/Jeonkwan/trojan-go-caddy.git && chmod +x ./trojan-go-caddy/*.sh"
 popd
 
 # enable ECN for vxtran performance boost
