@@ -40,15 +40,20 @@ BASE_DIR=$(pwd)
 cd /home/$USERNAME/
 
 su "$USERNAME" \
--c "curl -s \"https://get.sdkman.io\" | bash"
-
-su "$USERNAME" \
 -c "git clone https://github.com/Jeonkwan/trojan-go-caddy.git && chmod +x ./trojan-go-caddy/*.sh"
 
 su "$USERNAME" \
 -c "curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh -o ohmyzsh_install.sh && chmod +x ohmyzsh_install.sh"
 su "$USERNAME" \
 -c "sh -c "./ohmyzsh_install.sh""
+chsh "$USERNAME" -s /usr/bin/zsh
+
+su "$USERNAME" \
+-c "curl -s \"https://get.sdkman.io\" | bash"
+su "$USERNAME" \
+-c "echo \"source ~/.sdkman/bin/sdkman-init.sh\" >> ./.bashrc"
+su "$USERNAME" \
+-c "echo \"source ~/.sdkman/bin/sdkman-init.sh\" >> ./.zshrc"
 
 cd $BASE_DIR
 
