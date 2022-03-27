@@ -51,3 +51,21 @@ variable "ssh_public_key_path" {
     type = string
     description = "your ssh public key for importing to lightsail"
 }
+
+variable "domain_name" {
+    type = string
+}
+
+variable "subdomain_name" {
+    type = string
+}
+
+variable "namecheap_ddns_password" {
+    type = string
+    sensitive = true
+}
+
+variable "trojan_go_password" {
+    type = string
+    sensitive = true
+}

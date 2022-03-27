@@ -6,6 +6,11 @@ data "template_file" "vm_init_script" {
   template = "${file("${path.module}/setup_ubuntu.sh.tpl")}"
   vars = {
     username = var.machine_config["nonroot_username"]
+    domain_name = var.domain_name
+    subdomain_name = var.subdomain_name
+    public_ip = aws_lightsail_static_ip.instance_ip.ip_address
+    namecheap_ddns_password = var.namecheap_ddns_password
+    trojan_go_password = var.trojan_go_password
   }
 }
 
