@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# -*- coding: utf-8 -*-
-USERNAME=${username}
-DOMAIN=${domain_name}
-SUBDOMAIN=${subdomain_name}
-PUBLIC_IP=${public_ip}
-NC_DDNS_PASS=${namecheap_ddns_password}
-TROJAN_GO_PASS=${trojan_go_password}
+
+USERNAME="${username}"
+DOMAIN="${domain_name}"
+SUBDOMAIN="${subdomain_name}"
+PUBLIC_IP="${public_ip}"
+NC_DDNS_PASS="${namecheap_ddns_password}"
+TROJAN_GO_PASS="${trojan_go_password}"
 
 BASE_DIR=$(pwd)
 
@@ -14,6 +14,7 @@ apt-get update
 apt-get install -y \
 tmux \
 mosh \
+tree \
 uuid \
 zip \
 unzip
@@ -38,12 +39,14 @@ cd /opt
 git clone "https://github.com/Jeonkwan/trojan-go-caddy.git"
 cd trojan-go-caddy
 chmod +x *.sh
-source ./trojan_go_funcs.sh
+touch init.log
 echo "Update namecheap record"
-printf "${DOMAIN}\n${SUBDOMAIN}\n${PUBLIC_IP}\n${NC_DDNS_PASS}" | update_nc_dns_curl
+printf "$DOMAIN\n$SUBDOMAIN\n$PUBLIC_IP\n$NC_DDNS_PASS" | ./configure_namecheap_dns.sh >> init.log
 echo "Configure Trojan go"
-configure_trojan_go ${TROJAN_GO_PASS} ${SUBDOMAIN}.${DOMAIN}
-run_trojan_go
+printf "$TROJAN_GO_PASS\n$SUBDOMAIN.$DOMAIN" | ./configure_trojan-go.sh >> init.log
+tree ./ >> init.log
+echo "Run Trojan go"
+docker-compose -f ./docker-compose_trojan-go.yml up &
 cd $BASE_DIR
 
 # enable ECN for vxtran performance boost
@@ -54,7 +57,6 @@ sysctl -p
 # extra setup
 apt-get install -y \
 zsh \
-tree \
 ipcalc \
 htop
 
@@ -65,10 +67,10 @@ su "$USERNAME" \
 -c "sh -c "./ohmyzsh_install.sh""
 chsh "$USERNAME" -s /usr/bin/zsh
 
-su "$USERNAME" \
--c "curl -s \"https://get.sdkman.io\" | bash"
-su "$USERNAME" \
--c "echo \"source ~/.sdkman/bin/sdkman-init.sh\" >> ./.bashrc"
-su "$USERNAME" \
--c "echo \"source ~/.sdkman/bin/sdkman-init.sh\" >> ./.zshrc"
-cd $BASE_DIR
+# su "$USERNAME" \
+# -c "curl -s \"https://get.sdkman.io\" | bash"
+# su "$USERNAME" \
+# -c "echo \"source ~/.sdkman/bin/sdkman-init.sh\" >> ./.bashrc"
+# su "$USERNAME" \
+# -c "echo \"source ~/.sdkman/bin/sdkman-init.sh\" >> ./.zshrc"
+# cd $BASE_DIR
