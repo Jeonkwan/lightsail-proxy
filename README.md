@@ -11,7 +11,7 @@ An AWS Lightsail VM with proxy setup automatically
 Modify the `defaults.tfvars` or create your own e.g. `users.tfvars`. Just point to the `tfvars` file when you run `terraform plan` and `terraform apply`.
 
 ```bash
-tfvar_file="`users.tfvars`"  # if you are creating your own .tfvars
+tfvar_file="users.tfvars"  # if you are creating your own .tfvars
 terraform init
 terraform plan -var-file=$tfvar_file
 terraform apply -var-file=$tfvar_file

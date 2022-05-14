@@ -2,18 +2,6 @@ locals {
   instance_name = "${var.instance_name_prefix}-${var.selected_country}-${var.zones[var.selected_zone]}-${var.instance_customizable_name}"
 }
 
-data "template_file" "vm_init_script" {
-  template = "${file("${path.module}/setup_ubuntu.sh.tpl")}"
-  vars = {
-    username = var.machine_config["nonroot_username"]
-    domain_name = var.domain_name
-    subdomain_name = var.subdomain_name
-    public_ip = aws_lightsail_static_ip.instance_ip.ip_address
-    namecheap_ddns_password = var.namecheap_ddns_password
-    trojan_go_password = var.trojan_go_password
-  }
-}
-
 resource "aws_lightsail_static_ip_attachment" "lightsail_instance_ip_attachment" {
   static_ip_name = aws_lightsail_static_ip.instance_ip.id
   instance_name  =  aws_lightsail_instance.lightsail_instance.id
@@ -34,7 +22,17 @@ resource "aws_lightsail_instance" "lightsail_instance" {
   blueprint_id      = var.machine_config["os"]
   bundle_id         = var.machine_config["instance_type"]
   key_pair_name     = aws_lightsail_key_pair.ssh.name
-  user_data         = data.template_file.vm_init_script.rendered
+  user_data         = templatefile(
+    "${path.root}/setup_ubuntu.sh.tftpl",
+    {
+      username = var.machine_config["nonroot_username"],
+      domain_name = var.domain_name,
+      subdomain_name = var.subdomain_name,
+      public_ip = aws_lightsail_static_ip.instance_ip.ip_address,
+      namecheap_ddns_password = var.namecheap_ddns_password,
+      trojan_go_password = var.trojan_go_password
+    }
+  )
 }
 
 resource "aws_lightsail_instance_public_ports" "proxy" {

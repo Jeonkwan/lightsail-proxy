@@ -1,5 +1,14 @@
 variable "aws_profile" {
+    type = string
     default = "default"
+}
+
+variable "aws_conf_file_path" {
+    type = string
+}
+
+variable "aws_cred_file_path" {
+    type = string
 }
 
 variable "regions" {

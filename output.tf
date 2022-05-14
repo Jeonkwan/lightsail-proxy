@@ -1,6 +1,12 @@
-/* output "rendered_init_script" {
+/* 
+output "rendered_init_script" {
     value = data.template_file.vm_init_script.rendered
-} */
+}
+*/
+output "rendered_init_script" {
+    value = aws_lightsail_instance.lightsail_instance.user_data
+    sensitive = true
+}
 
 output "public_ip_address" {
     value = aws_lightsail_static_ip.instance_ip.ip_address
