@@ -61,6 +61,11 @@ variable "ssh_public_key_path" {
     description = "your ssh public key for importing to lightsail"
 }
 
+variable "ssh_private_key_path" {
+    type = string
+    description = "your ssh private key for connecting to lightsail vm after deployment"
+}
+
 variable "domain_name" {
     type = string
 }
