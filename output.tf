@@ -2,6 +2,10 @@ output "public_ip_address" {
     value = aws_lightsail_static_ip.instance_ip.ip_address
 }
 
+output "hostname" {
+    value = "${var.subdomain_name}.${var.domain_name}"
+}
+
 output "username" {
     value = var.machine_config["nonroot_username"]
 }
