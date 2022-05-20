@@ -3,6 +3,21 @@
   become: yes
   become_method: sudo
   tasks:
+    - name: Wait for instance to be ready
+      wait_for_connection:
+        timeout: 300
+
+    - name: Set cron job for daily reboot (default UTC timezone)
+      ansible.builtin.cron:
+        name: "daily reboot"
+        state: present
+        minute: "0"
+        hour: "20"
+        day: "*"
+        month: "*"
+        weekday: "*"
+        job: "shutdown -r"
+
     - name: Add Docker GPG apt Key
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
@@ -21,42 +36,131 @@
     - name: Install required system packages
       apt:
         pkg:
-          - curl
-          - uuid
-          - tmux
-          - mosh
-          - tree
-          - zip
-          - unzip
-          - zsh
-          - ipcalc
-          - htop
-          - docker-ce
+        - docker-ce
+        - curl
+        - uuid
+        - tmux
+        - mosh
+        - tree
+        - zip
+        - unzip
+        - ipcalc
+        - htop
+        - python3-pip
+        - python3
         state: latest
-        update_cache: no
+        update_cache: yes
         install_recommends: no
 
     - name: Add "ubuntu" user to "docker" group
-      user:
-        name: "ubuntu"
-        group: "docker"
+      ansible.builtin.user:
+        name: "{{ username }}"
+        groups: 
+          - docker
         append: yes
       tags:
-      - docker
+        - docker
 
-    - name: Install docker-compose from official github repo
-      get_url:
-        url : https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
-        dest: /usr/local/bin/docker-compose
-        mode: 'u+x,g+x'
+    # - name: Install docker-compose from official github repo
+    #   get_url:
+    #     url : https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
+    #     dest: /usr/local/bin/docker-compose
+    #     mode: 'u+x,g+x'
+    #   tags:
+    #     - docker
+
+    # - name: Create docker-compose symbolic link
+    #   ansible.builtin.file:
+    #     src: /usr/local/bin/docker-compose
+    #     dest: /usr/bin/docker-compose
+    #     group: docker
+    #     state: link
+    #   tags:
+    #     - docker
+    
+    - name: Start and enable Docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
       tags:
-      - docker
+        - docker
 
-    - name: Create a symbolic link
+    - name: Install Python Docker Module for Ansible
+      pip:
+        name: 
+          - docker
+          - docker-compose
+      tags:
+        - docker
+
+    - name: Remove previous trojan-go-caddy Directory
       ansible.builtin.file:
-        src: /usr/local/bin/docker-compose
-        dest: /usr/bin/docker-compose
-        group: docker
-        state: link
+        state: absent
+        path: /opt/trojan-go-caddy/
+
+    - name: Git checkout
+      ansible.builtin.git:
+        repo: 'https://github.com/Jeonkwan/trojan-go-caddy.git'
+        dest: /opt/trojan-go-caddy
+        version: master
+        clone: yes
       tags:
-      - docker
+        - trojan
+
+    - name: Create debug.log
+      ansible.builtin.file:
+        path: /opt/debug.log
+        state: touch
+      tags:
+        - trojan
+
+    - name: Update Namecheap Record
+      become_user: root
+      ansible.builtin.shell: |
+        chmod +x ./configure_namecheap_dns.sh
+        printf '{{ domain_name }}\n{{ subdomain_name }}\n{{ public_ip }}\n{{ namecheap_ddns_password }}' | ./configure_namecheap_dns.sh >> debug.log
+      args:
+        # executable: /usr/bin/bash
+        chdir: /opt/trojan-go-caddy
+      tags:
+        - trojan
+
+    - name: Configure Trojan go
+      become_user: root
+      ansible.builtin.shell: |
+        chmod +x ./configure_trojan-go.sh
+        printf '{{ trojan_go_password }}\n{{ subdomain_name }}.{{ domain_name }}' | ./configure_trojan-go.sh >> debug.log
+      args:
+        # executable: /usr/bin/bash
+        chdir: /opt/trojan-go-caddy
+      tags:
+        - trojan
+
+    - name: List content for debug
+      ansible.builtin.shell: tree ./ >> debug.log
+      args:
+        executable: /usr/bin/bash
+        chdir: /opt/trojan-go-caddy
+      tags:
+        - trojan
+
+    - name: Trojan Go Down
+      docker_compose:
+        project_src: /opt/trojan-go-caddy
+        files: 
+          - docker-compose_trojan-go.yml
+        state: absent
+      tags:
+        - trojan
+        - docker-compose
+
+    - name: Trojan Go Up
+      docker_compose:
+        project_src: /opt/trojan-go-caddy
+        files: 
+          - docker-compose_trojan-go.yml
+        state: present
+      tags:
+        - trojan
+        - docker-compose

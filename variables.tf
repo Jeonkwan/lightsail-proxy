@@ -76,10 +76,10 @@ variable "subdomain_name" {
 
 variable "namecheap_ddns_password" {
     type = string
-    sensitive = true
+    # sensitive = true
 }
 
 variable "trojan_go_password" {
     type = string
-    sensitive = true
+    # sensitive = true
 }
