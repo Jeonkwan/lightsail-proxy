@@ -22,17 +22,30 @@ resource "aws_lightsail_instance" "lightsail_instance" {
   blueprint_id      = var.machine_config["os"]
   bundle_id         = var.machine_config["instance_type"]
   key_pair_name     = aws_lightsail_key_pair.ssh.name
-  user_data         = templatefile(
-    "${path.root}/setup_ubuntu.sh.tftpl",
-    {
-      username = var.machine_config["nonroot_username"],
-      domain_name = var.domain_name,
-      subdomain_name = var.subdomain_name,
-      public_ip = aws_lightsail_static_ip.instance_ip.ip_address,
-      namecheap_ddns_password = var.namecheap_ddns_password,
-      trojan_go_password = var.trojan_go_password
-    }
-  )
+  # user_data         = templatefile(
+  #   "${path.root}/setup_ubuntu.sh.tftpl",
+  #   {
+  #     username = var.machine_config["nonroot_username"],
+  #     domain_name = var.domain_name,
+  #     subdomain_name = var.subdomain_name,
+  #     public_ip = aws_lightsail_static_ip.instance_ip.ip_address,
+  #     namecheap_ddns_password = var.namecheap_ddns_password,
+  #     trojan_go_password = var.trojan_go_password
+  #   }
+  # )
+
+  connection {
+    type = "ssh"
+    user = var.machine_config["nonroot_username"]
+    private_key = file(var.ssh_private_key_path)
+    host = aws_lightsail_instance.lightsail_instance.public_ip_address
+    target_platform = "unix"
+    port = 22
+  }
+
+  provisioner "local-exec" {
+    command = "ANSIBLE_SSH_RETRIES=5 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ${var.machine_config["nonroot_username"]} -i '${aws_lightsail_instance.lightsail_instance.public_ip_address},' --private-key ${var.ssh_private_key_path} --extra-vars 'username=${var.machine_config["nonroot_username"]} domain_name=${var.domain_name} subdomain_name=${var.subdomain_name} public_ip=${aws_lightsail_static_ip.instance_ip.ip_address} namecheap_ddns_password=${var.namecheap_ddns_password} trojan_go_password=${var.trojan_go_password}' setup_env.yaml"
+  }
 }
 
 resource "aws_lightsail_instance_public_ports" "proxy" {
