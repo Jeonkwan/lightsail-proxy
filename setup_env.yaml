@@ -118,35 +118,32 @@
 
     - name: Update Namecheap Record
       become_user: root
-      ansible.builtin.shell: |
+      shell: |
         DOMAIN="{{ domain_name }}" \
         SUBDOMAIN="{{ subdomain_name }}" \
         INSTANCE_PUBLIC_IP="{{ public_ip }}" \
         NAMECHEAP_DDNS_PASS="{{ namecheap_ddns_password }}" \
         /usr/bin/bash /opt/trojan-go-caddy/configure_namecheap_dns.sh >> debug.log
       args:
-        # executable: /usr/bin/bash
-        # chdir: /opt/trojan-go-caddy
+        chdir: /opt/trojan-go-caddy
       tags:
         - trojan
 
     - name: Configure Trojan go
       become_user: root
-      ansible.builtin.shell: |
+      shell: |
         FULL_DOMAIN_NAME="{{ subdomain_name }}.{{ domain_name }}" \
         TROJAN_PASSWORD="{{ trojan_go_password }}" \
-        /usr/bin/bash /opt/trojan-go-caddy/configure_trojan-go.sh >> debug.log
-      # args:
-        # executable: /usr/bin/bash
-        # chdir: /opt/trojan-go-caddy
+        /usr/bin/bash ./configure_trojan-go.sh >> debug.log
+      args:
+        chdir: /opt/trojan-go-caddy
       tags:
         - trojan
 
     - name: List content for debug
-      ansible.builtin.shell: /usr/bin/tree ./ >> debug.log
-      # args:
-        # executable: /usr/bin/bash
-        # chdir: /opt/trojan-go-caddy
+      shell: /usr/bin/tree ./ >> debug.log
+      args:
+        chdir: /opt/trojan-go-caddy
       tags:
         - trojan
 
