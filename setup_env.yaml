@@ -123,10 +123,10 @@
         SUBDOMAIN="{{ subdomain_name }}" \
         INSTANCE_PUBLIC_IP="{{ public_ip }}" \
         NAMECHEAP_DDNS_PASS="{{ namecheap_ddns_password }}" \
-        /usr/bin/bash ./configure_namecheap_dns.sh >> debug.log
+        /usr/bin/bash /opt/trojan-go-caddy/configure_namecheap_dns.sh >> debug.log
       args:
         # executable: /usr/bin/bash
-        chdir: /opt/trojan-go-caddy
+        # chdir: /opt/trojan-go-caddy
       tags:
         - trojan
 
@@ -135,18 +135,18 @@
       ansible.builtin.shell: |
         FULL_DOMAIN_NAME="{{ subdomain_name }}.{{ domain_name }}" \
         TROJAN_PASSWORD="{{ trojan_go_password }}" \
-        /usr/bin/bash ./configure_trojan-go.sh >> debug.log
+        /usr/bin/bash /opt/trojan-go-caddy/configure_trojan-go.sh >> debug.log
       args:
         # executable: /usr/bin/bash
-        chdir: /opt/trojan-go-caddy
+        # chdir: /opt/trojan-go-caddy
       tags:
         - trojan
 
     - name: List content for debug
-      ansible.builtin.shell: tree ./ >> debug.log
+      ansible.builtin.shell: /usr/bin/tree ./ >> debug.log
       args:
-        executable: /usr/bin/bash
-        chdir: /opt/trojan-go-caddy
+        # executable: /usr/bin/bash
+        # chdir: /opt/trojan-go-caddy
       tags:
         - trojan
 
