@@ -136,7 +136,7 @@
         FULL_DOMAIN_NAME="{{ subdomain_name }}.{{ domain_name }}" \
         TROJAN_PASSWORD="{{ trojan_go_password }}" \
         /usr/bin/bash /opt/trojan-go-caddy/configure_trojan-go.sh >> debug.log
-      args:
+      # args:
         # executable: /usr/bin/bash
         # chdir: /opt/trojan-go-caddy
       tags:
@@ -144,7 +144,7 @@
 
     - name: List content for debug
       ansible.builtin.shell: /usr/bin/tree ./ >> debug.log
-      args:
+      # args:
         # executable: /usr/bin/bash
         # chdir: /opt/trojan-go-caddy
       tags:
