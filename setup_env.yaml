@@ -168,9 +168,4 @@
         - docker-compose
 
     - name: Reboot after 5 mins
-      ansible.posix.at:
-        command: shutdown -r
-        count: 5
-        units: minutes
-        unique: yes
-        state: present
+      shell: shutdown -r 5
