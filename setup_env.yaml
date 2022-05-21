@@ -37,6 +37,7 @@
       apt:
         pkg:
         - docker-ce
+        - at
         - curl
         - uuid
         - tmux
@@ -164,3 +165,11 @@
       tags:
         - trojan
         - docker-compose
+
+    - name: Reboot after 10 mins
+      ansible.posix.at:
+        command: shutdown -r
+        count: 10
+        units: minutes
+        unique: yes
+        state: present
