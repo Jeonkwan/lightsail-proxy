@@ -52,7 +52,7 @@ variable "machine_config" {
     default = {
         os = "ubuntu_20_04"
         nonroot_username = "ubuntu"
-        instance_type = "nano_2_0" # india uses nano_2_1 instead
+        instance_type = "medium_2_0" # india uses nano_2_1 instead
     }
 }
 
