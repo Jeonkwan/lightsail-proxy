@@ -104,7 +104,7 @@
       ansible.builtin.git:
         repo: 'https://github.com/Jeonkwan/trojan-go-caddy.git'
         dest: /opt/trojan-go-caddy
-        version: master
+        version: trojan-go-caddy-combined-image
         clone: yes
       tags:
         - trojan
@@ -151,7 +151,7 @@
       docker_compose:
         project_src: /opt/trojan-go-caddy
         files: 
-          - docker-compose_trojan-go.yml
+          - docker-compose_trojan-go-caddy.yml
         state: absent
       tags:
         - trojan
@@ -161,7 +161,7 @@
       docker_compose:
         project_src: /opt/trojan-go-caddy
         files: 
-          - docker-compose_trojan-go.yml
+          - docker-compose_trojan-go-caddy.yml
         state: present
       tags:
         - trojan
