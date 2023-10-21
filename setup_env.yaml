@@ -167,5 +167,5 @@
         - trojan
         - docker-compose
 
-    - name: Reboot after 5 mins
-      shell: shutdown -r 5
+    - name: Reboot after 3 mins
+      shell: shutdown -r 3

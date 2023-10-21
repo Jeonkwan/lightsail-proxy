@@ -29,3 +29,5 @@ override.tf.json
 
 # Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
 # example: *tfplan*
+tf_cloud_backend.tf
+.vscode/settings.json

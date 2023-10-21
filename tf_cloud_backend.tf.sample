@@ -1,0 +1,10 @@
+# Terraform Cloud Backend Config 
+terraform {
+  cloud {
+    organization = "XXXX"
+
+    workspaces {
+      name = "XXXXX"
+    }
+  }
+}
