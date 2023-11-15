@@ -7,17 +7,57 @@
       wait_for_connection:
         timeout: 300
 
-    - name: Set cron job for daily reboot (default UTC timezone)
-      ansible.builtin.cron:
-        name: "daily reboot"
-        state: present
-        minute: "0"
-        hour: "20"
-        day: "*"
-        month: "*"
-        weekday: "*"
-        job: "shutdown -r"
+    - name: Remove previous trojan-go-caddy Directory
+      ansible.builtin.file:
+        state: absent
+        path: /opt/trojan-go-caddy/
 
+    - name: Git checkout
+      ansible.builtin.git:
+        repo: 'https://github.com/Jeonkwan/trojan-go-caddy.git'
+        dest: /opt/trojan-go-caddy
+        version: master
+        clone: yes
+      tags:
+        - trojan
+
+    - name: Create debug.log
+      ansible.builtin.file:
+        path: /opt/debug.log
+        state: touch
+      tags:
+        - trojan
+
+    - name: Update Namecheap Record
+      become_user: root
+      shell: |
+        DOMAIN="{{ domain_name }}" \
+        SUBDOMAIN="{{ subdomain_name }}" \
+        INSTANCE_PUBLIC_IP="{{ public_ip }}" \
+        NAMECHEAP_DDNS_PASS="{{ namecheap_ddns_password }}" \
+        /usr/bin/bash /opt/trojan-go-caddy/configure_namecheap_dns.sh >> debug.log
+      args:
+        chdir: /opt/trojan-go-caddy
+      tags:
+        - trojan
+
+    - name: Configure Trojan go
+      become_user: root
+      shell: |
+        FULL_DOMAIN_NAME="{{ subdomain_name }}.{{ domain_name }}" \
+        TROJAN_PASSWORD="{{ trojan_go_password }}" \
+        /usr/bin/bash ./configure_trojan-go.sh >> debug.log
+      args:
+        chdir: /opt/trojan-go-caddy
+      tags:
+        - trojan
+
+    - name: List content for debug
+      shell: /usr/bin/tree ./ >> debug.log
+      args:
+        chdir: /opt/trojan-go-caddy
+      tags:
+        - trojan
     - name: Add Docker GPG apt Key
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
@@ -94,58 +134,6 @@
           - docker-compose
       tags:
         - docker
-
-    - name: Remove previous trojan-go-caddy Directory
-      ansible.builtin.file:
-        state: absent
-        path: /opt/trojan-go-caddy/
-
-    - name: Git checkout
-      ansible.builtin.git:
-        repo: 'https://github.com/Jeonkwan/trojan-go-caddy.git'
-        dest: /opt/trojan-go-caddy
-        version: master
-        clone: yes
-      tags:
-        - trojan
-
-    - name: Create debug.log
-      ansible.builtin.file:
-        path: /opt/debug.log
-        state: touch
-      tags:
-        - trojan
-
-    - name: Update Namecheap Record
-      become_user: root
-      shell: |
-        DOMAIN="{{ domain_name }}" \
-        SUBDOMAIN="{{ subdomain_name }}" \
-        INSTANCE_PUBLIC_IP="{{ public_ip }}" \
-        NAMECHEAP_DDNS_PASS="{{ namecheap_ddns_password }}" \
-        /usr/bin/bash /opt/trojan-go-caddy/configure_namecheap_dns.sh >> debug.log
-      args:
-        chdir: /opt/trojan-go-caddy
-      tags:
-        - trojan
-
-    - name: Configure Trojan go
-      become_user: root
-      shell: |
-        FULL_DOMAIN_NAME="{{ subdomain_name }}.{{ domain_name }}" \
-        TROJAN_PASSWORD="{{ trojan_go_password }}" \
-        /usr/bin/bash ./configure_trojan-go.sh >> debug.log
-      args:
-        chdir: /opt/trojan-go-caddy
-      tags:
-        - trojan
-
-    - name: List content for debug
-      shell: /usr/bin/tree ./ >> debug.log
-      args:
-        chdir: /opt/trojan-go-caddy
-      tags:
-        - trojan
 
     - name: Trojan Go Down
       docker_compose:
