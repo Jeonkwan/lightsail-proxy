@@ -82,7 +82,6 @@
         - uuid
         - tmux
         - mosh
-        - tree
         - zip
         - unzip
         - ipcalc
@@ -154,6 +153,3 @@
       tags:
         - trojan
         - docker-compose
-
-    - name: Reboot after 3 mins
-      shell: shutdown -r 3

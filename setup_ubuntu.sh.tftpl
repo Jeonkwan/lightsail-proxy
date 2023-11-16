@@ -12,7 +12,8 @@ PLAYBOOK_BRANCH="main"
 apt-get update
 apt-get install --no-install-recommends -y \
     ansible \
-    curl
+    curl \
+    tree
 
 curl \
     -L https://raw.githubusercontent.com/Jeonkwan/lightsail-proxy/$PLAYBOOK_BRANCH/setup_env.yaml \
