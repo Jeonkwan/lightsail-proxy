@@ -157,3 +157,12 @@
       tags:
         - trojan
         - docker-compose
+
+    - name: Create daily reboot cronjob
+      ansible.builtin.cron:
+        minute: "0"
+        hour: "20"
+        job: 'reboot'
+        state: present
+      tags:
+        - cronjob
