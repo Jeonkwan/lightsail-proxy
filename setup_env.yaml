@@ -160,6 +160,7 @@
 
     - name: Create daily reboot cronjob
       ansible.builtin.cron:
+        name: "daily reboot"
         minute: "0"
         hour: "20"
         job: 'reboot'
