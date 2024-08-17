@@ -83,3 +83,8 @@ variable "trojan_go_password" {
     type = string
     sensitive = true
 }
+
+variable "playbook_branch" {
+  type = string
+  default = "main"
+}

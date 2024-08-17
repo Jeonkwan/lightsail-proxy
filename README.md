@@ -11,8 +11,11 @@ An AWS Lightsail VM with proxy setup automatically
 Modify the `defaults.tfvars` or create your own e.g. `users.tfvars`. Just point to the `tfvars` file when you run `terraform plan` and `terraform apply`.
 
 ```bash
-tfvar_file="users.tfvars"  # if you are creating your own .tfvars
+WS_NAME="expresso"
+TFVARS_FILE="${WS_NAME}.tfvars"  # if you are creating your own .tfvars
+terraform workspace new $WS_NAME
+terraform select new $WS_NAME
 terraform init
-terraform plan -var-file=$tfvar_file
-terraform apply -var-file=$tfvar_file
+terraform plan -var-file=$TFVARS_FILE
+terraform apply -var-file=$TFVARS_FILE
 ```

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -x
 
 USERNAME="${username}"
 DOMAIN="${domain_name}"
@@ -6,17 +7,25 @@ SUBDOMAIN="${subdomain_name}"
 PUBLIC_IP="${public_ip}"
 NC_DDNS_PASS="${namecheap_ddns_password}"
 TROJAN_GO_PASS="${trojan_go_password}"
-PLAYBOOK_BRANCH="main"
+PLAYBOOK_BRANCH="${playbook_branch}"
 
 # minimum setup
+# add-apt-repository ppa:ansible/ansible -y
 apt-get update
 apt-get install --no-install-recommends -y \
-    ansible \
     curl \
-    tree
+    tree \
+    python3 \
+    python3-pip
+
+python3 -m pip install ansible
+
+which ansible
+ansible --version
 
 curl \
     -L https://raw.githubusercontent.com/Jeonkwan/lightsail-proxy/$PLAYBOOK_BRANCH/setup_env.yaml \
     -o /opt/setup_env.yaml
 
-ansible-playbook --connection=local --inventory '127.0.0.1,' --limit 127.0.0.1 --extra-vars "username=$USERNAME domain_name=$DOMAIN subdomain_name=$SUBDOMAIN public_ip=$PUBLIC_IP namecheap_ddns_password=$NC_DDNS_PASS trojan_go_password=$TROJAN_GO_PASS" /opt/setup_env.yaml
+ansible-galaxy collection install community.docker
+ansible-playbook -vv --connection=local --inventory '127.0.0.1,' --limit 127.0.0.1 --extra-vars "username=$USERNAME domain_name=$DOMAIN subdomain_name=$SUBDOMAIN public_ip=$PUBLIC_IP namecheap_ddns_password=$NC_DDNS_PASS trojan_go_password=$TROJAN_GO_PASS" /opt/setup_env.yaml

@@ -31,6 +31,7 @@ resource "aws_lightsail_instance" "lightsail_instance" {
       public_ip = aws_lightsail_static_ip.instance_ip.ip_address,
       namecheap_ddns_password = var.namecheap_ddns_password,
       trojan_go_password = var.trojan_go_password
+      playbook_branch = var.playbook_branch
     }
   )
 
