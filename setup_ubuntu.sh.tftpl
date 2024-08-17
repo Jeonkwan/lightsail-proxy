@@ -10,12 +10,15 @@ TROJAN_GO_PASS="${trojan_go_password}"
 PLAYBOOK_BRANCH="${playbook_branch}"
 
 # minimum setup
-add-apt-repository ppa:ansible/ansible -y
+# add-apt-repository ppa:ansible/ansible -y
 apt-get update
 apt-get install --no-install-recommends -y \
-    ansible \
     curl \
-    tree
+    tree \
+    python3 \
+    python3-pip
+
+python3 -m pip install ansible
 
 which ansible
 ansible --version
