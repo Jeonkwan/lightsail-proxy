@@ -64,10 +64,14 @@
         state: present
       tags: 
         - docker
+  
+    - name: Get Ubuntu Code Name
+      ansible.builtin.shell: lsb_release -sc
+      register: code_name_result
 
     - name: Add Docker Repository
       apt_repository:
-        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        repo: "deb https://download.docker.com/linux/ubuntu {{ code_name_result.stdout }} stable"
         state: present
         update_cache: yes
       tags: 
