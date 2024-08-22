@@ -88,12 +88,9 @@
         - at
         - curl
         - uuid
-        - tmux
-        - mosh
         - zip
         - unzip
         - ipcalc
-        - htop
         state: latest
         update_cache: yes
         install_recommends: no
