@@ -11,6 +11,7 @@ PLAYBOOK_BRANCH="${playbook_branch}"
 
 # minimum setup
 # add-apt-repository ppa:ansible/ansible -y
+export DEBIAN_FRONTEND="noninteractive"
 apt-get update
 apt-get install --no-install-recommends -y \
     at \
