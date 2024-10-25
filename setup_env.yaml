@@ -132,13 +132,14 @@
       tags:
         - docker
 
-    - name: Install Python Docker Module for Ansible
-      pip:
-        name: 
-          - docker
-          - docker-compose
-      tags:
-        - docker
+    # install with apt install
+    # - name: Install Python Docker Module for Ansible
+    #   pip:
+    #     name: 
+    #       - docker
+    #       - docker-compose
+    #   tags:
+    #     - docker
 
     - name: Trojan Go Down
       community.docker.docker_compose_v2:
