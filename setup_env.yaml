@@ -58,6 +58,7 @@
         chdir: /opt/trojan-go-caddy
       tags:
         - trojan
+    
     - name: Add Docker GPG apt Key
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
@@ -68,6 +69,8 @@
     - name: Get Ubuntu Code Name
       ansible.builtin.shell: lsb_release -sc
       register: code_name_result
+      tags: 
+        - docker
 
     - name: Add Docker Repository
       apt_repository:
@@ -77,26 +80,19 @@
       tags: 
         - docker
 
-    - name: Install required system packages
-      apt:
-        pkg:
-        - docker-ce
-        - docker-ce-cli
-        - containerd.io
-        - docker-buildx-plugin
-        - docker-compose-plugin
-        - at
-        - curl
-        - uuid
-        # - tmux
-        # - mosh
-        - zip
-        - unzip
-        - ipcalc
-        - htop
-        state: latest
-        update_cache: yes
-        install_recommends: no
+    - name: Install docker ce packages
+      ansible.builtin.shell: |
+        export DEBIAN_FRONTEND="noninteractive"
+        apt-get -y update
+        apt-get -y install --no-install-recommends \
+          docker-ce \
+          docker-ce-cli \
+          containerd.io \
+          docker-buildx-plugin \
+          docker-compose-plugin
+      register: apt_install_docker_ce
+      tags: 
+        - docker
 
     - name: Add "ubuntu" user to "docker" group
       ansible.builtin.user:
