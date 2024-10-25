@@ -73,7 +73,7 @@
       apt_repository:
         repo: "deb https://download.docker.com/linux/ubuntu {{ code_name_result.stdout }} stable"
         state: present
-        update_cache: yes
+        update_cache: no
       tags: 
         - docker
 
@@ -88,8 +88,8 @@
         - at
         - curl
         - uuid
-        - tmux
-        - mosh
+        # - tmux
+        # - mosh
         - zip
         - unzip
         - ipcalc
