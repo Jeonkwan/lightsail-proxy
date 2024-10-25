@@ -50,7 +50,7 @@ variable "instance_customizable_name" {
 variable "machine_config" {
     type = map
     default = {
-        os = "ubuntu_20_04"
+        os = "ubuntu_24_04"
         nonroot_username = "ubuntu"
         instance_type = "nano_2_0" # india uses nano_2_1 instead
     }
