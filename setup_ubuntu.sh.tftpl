@@ -32,7 +32,7 @@ apt-get install --no-install-recommends -y \
     git
 
 python3 -m venv /opt/venv-gcp-proxy
-source /opt/venv-gcp-proxy/bin/activate
+export PATH="/opt/venv-gcp-proxy/bin/:$PATH"
 pip install \
     ansible \
     docker
