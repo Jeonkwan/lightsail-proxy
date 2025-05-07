@@ -3,9 +3,9 @@
   become: yes
   become_method: sudo
   tasks:
-    - name: Wait for instance to be ready
-      wait_for_connection:
-        timeout: 300
+    # - name: Wait for instance to be ready
+    #   wait_for_connection:
+    #     timeout: 300
 
     - name: Remove previous trojan-go-caddy Directory
       ansible.builtin.file:
@@ -21,12 +21,12 @@
       tags:
         - trojan
 
-    - name: Create debug.log
-      ansible.builtin.file:
-        path: /opt/debug.log
-        state: touch
-      tags:
-        - trojan
+    # - name: Create debug.log
+    #   ansible.builtin.file:
+    #     path: /opt/debug.log
+    #     state: touch
+    #   tags:
+    #     - trojan
 
     - name: Update Namecheap Record
       become_user: root
@@ -35,7 +35,7 @@
         SUBDOMAIN="{{ subdomain_name }}" \
         INSTANCE_PUBLIC_IP="{{ public_ip }}" \
         NAMECHEAP_DDNS_PASS="{{ namecheap_ddns_password }}" \
-        /usr/bin/bash /opt/trojan-go-caddy/configure_namecheap_dns.sh >> debug.log
+        /usr/bin/bash /opt/trojan-go-caddy/configure_namecheap_dns.sh
       args:
         chdir: /opt/trojan-go-caddy
       tags:
@@ -46,14 +46,14 @@
       shell: |
         FULL_DOMAIN_NAME="{{ subdomain_name }}.{{ domain_name }}" \
         TROJAN_PASSWORD="{{ trojan_go_password }}" \
-        /usr/bin/bash ./configure_trojan-go.sh >> debug.log
+        /usr/bin/bash ./configure_trojan-go.sh
       args:
         chdir: /opt/trojan-go-caddy
       tags:
         - trojan
 
     - name: List content for debug
-      shell: /usr/bin/tree ./ >> debug.log
+      shell: /usr/bin/tree ./
       args:
         chdir: /opt/trojan-go-caddy
       tags:
