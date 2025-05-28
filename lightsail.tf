@@ -17,6 +17,7 @@ resource "aws_lightsail_key_pair" "ssh" {
 }
 
 resource "aws_lightsail_instance" "lightsail_instance" {
+# introducing random_id to create unique instance names, this can keep IP address when apply again but rotate the whole machine, then SSL certificates will be renewed at new instance startup
   name              = "${local.instance_name}-${random_id.instance_suffix.hex}"
   availability_zone = "${var.regions[var.selected_country]}${var.zones[var.selected_zone]}"
   blueprint_id      = var.machine_config["os"]
