@@ -21,11 +21,12 @@ validate_ws_and_tfvar_file() {
     fi
 }
 
+
 tf_plan() {
     local ws_name=$1
     validate_ws_and_tfvar_file $ws_name
     is_ws_correct=$?
-    [[ $is_ws_correct -eq 0 ]] && { terraform plan -var-file=${ws_name}.tfvars }
+    [[ $is_ws_correct -eq 0 ]] && { terraform init -upgrade; terraform validate; terraform plan -var-file=${ws_name}.tfvars }
 }
 
 tf_deploy() {
@@ -34,7 +35,7 @@ tf_deploy() {
     validate_ws_and_tfvar_file $ws_name
     is_ws_correct=$?
     [[ ! -n "$action" ]] && { echo "Missing Action Argument apply or destroy"; return 1;}
-    [[ $is_ws_correct -eq 0 ]] && { terraform $action -var-file=${ws_name}.tfvars; }
+    [[ $is_ws_correct -eq 0 ]] && { terraform init -upgrade; terraform validate; terraform $action -var-file=${ws_name}.tfvars; }
 }
 
 tf_deploy_auto() {
@@ -43,5 +44,5 @@ tf_deploy_auto() {
     validate_ws_and_tfvar_file $ws_name
     is_ws_correct=$?
     [[ ! -n "$action" ]] && { echo "Missing Action Argument apply or destroy"; return 1;}
-    [[ $is_ws_correct -eq 0 ]] && { terraform $action -var-file=${ws_name}.tfvars -auto-approve; }
+    [[ $is_ws_correct -eq 0 ]] && { terraform init -upgrade; terraform validate; terraform $action -var-file=${ws_name}.tfvars -auto-approve; }
 }

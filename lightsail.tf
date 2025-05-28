@@ -17,7 +17,7 @@ resource "aws_lightsail_key_pair" "ssh" {
 }
 
 resource "aws_lightsail_instance" "lightsail_instance" {
-  name              = local.instance_name
+  name              = "${local.instance_name}-${random_id.instance_suffix.hex}"
   availability_zone = "${var.regions[var.selected_country]}${var.zones[var.selected_zone]}"
   blueprint_id      = var.machine_config["os"]
   bundle_id         = var.machine_config["instance_type"]
@@ -82,5 +82,9 @@ resource "aws_lightsail_instance_public_ports" "proxy" {
     from_port   = 8990
     to_port     = 8990
   }
+}
+
+resource "random_id" "instance_suffix" {
+  byte_length = 4
 }
 
