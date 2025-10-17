@@ -46,6 +46,7 @@
       shell: |
         FULL_DOMAIN_NAME="{{ subdomain_name }}.{{ domain_name }}" \
         TROJAN_PASSWORD="{{ trojan_go_password }}" \
+        WEBSOCKET_PATH=wschannel \
         /usr/bin/bash ./configure_trojan-go.sh
       args:
         chdir: /opt/trojan-go-caddy
