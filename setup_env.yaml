@@ -16,7 +16,7 @@
       ansible.builtin.git:
         repo: 'https://github.com/Jeonkwan/trojan-go-caddy.git'
         dest: /opt/trojan-go-caddy
-        version: master
+        version: codex/add-trojan-go-and-caddy-config-for-websocket
         clone: yes
       tags:
         - trojan
