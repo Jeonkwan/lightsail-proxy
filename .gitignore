@@ -31,3 +31,4 @@ override.tf.json
 # example: *tfplan*
 tf_cloud_backend.tf
 .vscode/settings.json
+namecheap_dns_update.log
