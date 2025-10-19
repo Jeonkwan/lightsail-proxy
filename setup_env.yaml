@@ -28,19 +28,6 @@
     #   tags:
     #     - trojan
 
-    - name: Update Namecheap Record
-      become_user: root
-      shell: |
-        DOMAIN="{{ domain_name }}" \
-        SUBDOMAIN="{{ subdomain_name }}" \
-        INSTANCE_PUBLIC_IP="{{ public_ip }}" \
-        NAMECHEAP_DDNS_PASS="{{ namecheap_ddns_password }}" \
-        /usr/bin/bash /opt/trojan-go-caddy/configure_namecheap_dns.sh
-      args:
-        chdir: /opt/trojan-go-caddy
-      tags:
-        - trojan
-
     - name: Configure Trojan go
       become_user: root
       shell: |
