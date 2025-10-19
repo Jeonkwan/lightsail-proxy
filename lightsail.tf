@@ -4,11 +4,36 @@ locals {
 
 resource "aws_lightsail_static_ip_attachment" "lightsail_instance_ip_attachment" {
   static_ip_name = aws_lightsail_static_ip.instance_ip.id
-  instance_name  =  aws_lightsail_instance.lightsail_instance.id
+  instance_name  = aws_lightsail_instance.lightsail_instance.id
 }
 
 resource "aws_lightsail_static_ip" "instance_ip" {
   name = "${local.instance_name}-ip"
+}
+
+resource "null_resource" "namecheap_dns_update" {
+  depends_on = [aws_lightsail_static_ip.instance_ip]
+
+  triggers = {
+    instance_ip = aws_lightsail_static_ip.instance_ip.ip_address
+    domain      = var.domain_name
+    subdomain   = var.subdomain_name
+  }
+
+  provisioner "local-exec" {
+    command = "${path.module}/scripts/configure_namecheap_dns.sh"
+    environment = {
+      DOMAIN              = var.domain_name
+      SUBDOMAIN           = var.subdomain_name
+      INSTANCE_PUBLIC_IP  = aws_lightsail_static_ip.instance_ip.ip_address
+      NAMECHEAP_DDNS_PASS = var.namecheap_ddns_password
+      NAMECHEAP_DDNS_LOG  = "${path.module}/namecheap_dns_update.log"
+    }
+  }
+
+  provisioner "local-exec" {
+    command = "cat \"${path.module}/namecheap_dns_update.log\" && rm -f \"${path.module}/namecheap_dns_update.log\""
+  }
 }
 
 resource "aws_lightsail_key_pair" "ssh" {
@@ -17,22 +42,24 @@ resource "aws_lightsail_key_pair" "ssh" {
 }
 
 resource "aws_lightsail_instance" "lightsail_instance" {
+  depends_on = [null_resource.namecheap_dns_update]
+
   # introducing timestamp to create unique instance names, this can keep IP address when apply again but rotate the whole machine, then SSL certificates will be renewed at new instance startup
   name              = "${local.instance_name}-${formatdate("YYYYMMDDhhmmss", timestamp())}"
   availability_zone = "${var.regions[var.selected_country]}${var.zones[var.selected_zone]}"
   blueprint_id      = var.machine_config["os"]
   bundle_id         = var.machine_config["instance_type"]
   key_pair_name     = aws_lightsail_key_pair.ssh.name
-  user_data         = templatefile(
+  user_data = templatefile(
     "${path.root}/setup_ubuntu.sh.tftpl",
     {
-      username = var.machine_config["nonroot_username"],
-      domain_name = var.domain_name,
-      subdomain_name = var.subdomain_name,
-      public_ip = aws_lightsail_static_ip.instance_ip.ip_address,
+      username                = var.machine_config["nonroot_username"],
+      domain_name             = var.domain_name,
+      subdomain_name          = var.subdomain_name,
+      public_ip               = aws_lightsail_static_ip.instance_ip.ip_address,
       namecheap_ddns_password = var.namecheap_ddns_password,
-      trojan_go_password = var.trojan_go_password
-      playbook_branch = var.playbook_branch
+      trojan_go_password      = var.trojan_go_password,
+      playbook_branch         = var.playbook_branch
     }
   )
 
@@ -54,34 +81,34 @@ resource "aws_lightsail_instance_public_ports" "proxy" {
   instance_name = aws_lightsail_instance.lightsail_instance.name
 
   port_info {
-    protocol    = "tcp"
-    from_port   = 22
-    to_port     = 22
+    protocol  = "tcp"
+    from_port = 22
+    to_port   = 22
   }
   port_info {
-    protocol    = "tcp"
-    from_port   = 80
-    to_port     = 80
+    protocol  = "tcp"
+    from_port = 80
+    to_port   = 80
   }
   port_info {
-    protocol    = "tcp"
-    from_port   = 443
-    to_port     = 443
+    protocol  = "tcp"
+    from_port = 443
+    to_port   = 443
   }
   port_info {
-    protocol    = "udp"
-    from_port   = 60000
-    to_port     = 60010
+    protocol  = "udp"
+    from_port = 60000
+    to_port   = 60010
   }
   port_info {
-    protocol    = "tcp"
-    from_port   = 8990
-    to_port     = 8990
+    protocol  = "tcp"
+    from_port = 8990
+    to_port   = 8990
   }
   port_info {
-    protocol    = "udp"
-    from_port   = 8990
-    to_port     = 8990
+    protocol  = "udp"
+    from_port = 8990
+    to_port   = 8990
   }
 }
 
