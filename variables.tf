@@ -105,11 +105,6 @@ variable "proxy_contact_email" {
   type        = string
   description = "Email address used by solutions that integrate with certificate authorities (required for less-vision)."
   default     = ""
-
-  validation {
-    condition = var.proxy_solution == "less-vision" ? length(trimspace(var.proxy_contact_email)) > 0 : true
-    error_message = "proxy_contact_email must be provided when proxy_solution is set to less-vision."
-  }
 }
 
 variable "playbook_branch" {

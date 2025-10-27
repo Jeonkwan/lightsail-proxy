@@ -65,6 +65,13 @@ resource "aws_lightsail_instance" "lightsail_instance" {
     }
   )
 
+  lifecycle {
+    precondition {
+      condition     = var.proxy_solution != "less-vision" || length(trimspace(var.proxy_contact_email)) > 0
+      error_message = "proxy_contact_email must be provided when proxy_solution is set to less-vision."
+    }
+  }
+
   # connection {
   #   type = "ssh"
   #   user = var.machine_config["nonroot_username"]
