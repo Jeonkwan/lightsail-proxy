@@ -22,6 +22,13 @@ This project provisions and maintains a Lightsail instance, associates a static 
   - `instance_customizable_name` becomes part of the instance name.
   - `ssh_public_key_path` / `ssh_private_key_path` point at your key pair.
   - Domain-related settings feed directly into the user data template so the VM can update DNS and configure certificates.
+  - `proxy_solution` selects which automation stack boots on the instance (`trojan-go` or `less-vision`).
+  - `proxy_contact_email` stays optional for Trojan-Go but is required when `proxy_solution = "less-vision"` so Let’s Encrypt can send certificate notices.
+
+### Proxy automation assets
+
+- `scripts/trojan-go/` contains the bootstrap shell wrapper and Ansible playbook that previously lived in `setup_env.yaml`. The script downloads the playbook, pipes Terraform-provided variables into JSON, and executes everything locally with consistent logging.
+- `scripts/less-vision/` mirrors that structure for the [less-vision](https://github.com/Jeonkwan/less-vision) project. Its bootstrap script clones the upstream repository into `/opt/lightsail-proxy/less-vision`, builds the required `--extra-vars`, and invokes the bundled playbook without touching Trojan-Go resources.
 
 ### Workspaces & state
 
@@ -47,7 +54,7 @@ State is kept per workspace inside `terraform.tfstate.d`, so you can run several
 3. **Lightsail resources** (`lightsail-proxy/lightsail.tf:4`)
    - `aws_lightsail_static_ip` reserves an address and `aws_lightsail_static_ip_attachment` attaches it to the VM.
    - `aws_lightsail_key_pair` imports your SSH public key for console access.
-  - `aws_lightsail_instance` provisions the Ubuntu host and injects cloud-init user data from `setup_ubuntu.sh.tftpl`. The template receives domain, subdomain, Namecheap token, and the shared proxy server UUID (Trojan-Go reads it as the password while less-vision uses it directly) via `templatefile`.
+  - `aws_lightsail_instance` provisions the Ubuntu host and injects cloud-init user data from `setup_ubuntu.sh.tftpl`. The template now wires domain, subdomain, Namecheap token, the shared proxy server UUID, `proxy_solution`, and (when required) `proxy_contact_email` into the script. `setup_ubuntu.sh.tftpl` installs common prerequisites once and then downloads the matching solution bootstrap (`scripts/trojan-go/setup.sh` or `scripts/less-vision/setup.sh`) before running its Ansible playbook.
    - `aws_lightsail_instance_public_ports` opens SSH (22), HTTP (80), HTTPS (443), UDP/TCP proxy ports (8990), and a UDP range used by Mosh (60000-60010).
 
 4. **Outputs** (`lightsail-proxy/output.tf:1`)
