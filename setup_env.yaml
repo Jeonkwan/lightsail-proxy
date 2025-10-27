@@ -45,7 +45,7 @@
       become_user: root
       shell: |
         FULL_DOMAIN_NAME="{{ subdomain_name }}.{{ domain_name }}" \
-        TROJAN_PASSWORD="{{ trojan_go_password }}" \
+        TROJAN_PASSWORD="{{ proxy_server_uuid }}" \
         /usr/bin/bash ./configure_trojan-go.sh
       args:
         chdir: /opt/trojan-go-caddy

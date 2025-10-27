@@ -58,7 +58,7 @@ resource "aws_lightsail_instance" "lightsail_instance" {
       subdomain_name          = var.subdomain_name,
       public_ip               = aws_lightsail_static_ip.instance_ip.ip_address,
       namecheap_ddns_password = var.namecheap_ddns_password,
-      trojan_go_password      = var.trojan_go_password,
+      proxy_server_uuid       = var.proxy_server_uuid,
       playbook_branch         = var.playbook_branch
     }
   )
@@ -73,7 +73,7 @@ resource "aws_lightsail_instance" "lightsail_instance" {
   # }
 
   # provisioner "local-exec" {
-  #   command = "ANSIBLE_SSH_RETRIES=5 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ${var.machine_config["nonroot_username"]} -i '${aws_lightsail_instance.lightsail_instance.public_ip_address},' --private-key ${var.ssh_private_key_path} --extra-vars 'username=${var.machine_config["nonroot_username"]} domain_name=${var.domain_name} subdomain_name=${var.subdomain_name} public_ip=${aws_lightsail_static_ip.instance_ip.ip_address} namecheap_ddns_password=${var.namecheap_ddns_password} trojan_go_password=${var.trojan_go_password}' setup_env.yaml"
+  #   command = "ANSIBLE_SSH_RETRIES=5 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ${var.machine_config["nonroot_username"]} -i '${aws_lightsail_instance.lightsail_instance.public_ip_address},' --private-key ${var.ssh_private_key_path} --extra-vars 'username=${var.machine_config["nonroot_username"]} domain_name=${var.domain_name} subdomain_name=${var.subdomain_name} public_ip=${aws_lightsail_static_ip.instance_ip.ip_address} namecheap_ddns_password=${var.namecheap_ddns_password} proxy_server_uuid=${var.proxy_server_uuid}' setup_env.yaml"
   # }
 }
 

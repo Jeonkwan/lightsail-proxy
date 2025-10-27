@@ -46,7 +46,7 @@ State is kept per workspace inside `terraform.tfstate.d`, so you can run several
 3. **Lightsail resources** (`lightsail-proxy/lightsail.tf:4`)
    - `aws_lightsail_static_ip` reserves an address and `aws_lightsail_static_ip_attachment` attaches it to the VM.
    - `aws_lightsail_key_pair` imports your SSH public key for console access.
-   - `aws_lightsail_instance` provisions the Ubuntu host and injects cloud-init user data from `setup_ubuntu.sh.tftpl`. The template receives domain, subdomain, Namecheap token, and Trojan-Go password via `templatefile`.
+  - `aws_lightsail_instance` provisions the Ubuntu host and injects cloud-init user data from `setup_ubuntu.sh.tftpl`. The template receives domain, subdomain, Namecheap token, and the shared proxy server UUID (Trojan-Go reads it as the password while less-vision uses it directly) via `templatefile`.
    - `aws_lightsail_instance_public_ports` opens SSH (22), HTTP (80), HTTPS (443), UDP/TCP proxy ports (8990), and a UDP range used by Mosh (60000-60010).
 
 4. **Outputs** (`lightsail-proxy/output.tf:1`)
