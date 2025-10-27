@@ -79,9 +79,15 @@ variable "namecheap_ddns_password" {
   sensitive = true
 }
 
-variable "trojan_go_password" {
-  type      = string
-  sensitive = true
+variable "proxy_server_uuid" {
+  type        = string
+  sensitive   = true
+  description = "UUID shared by proxy solutions (Trojan-Go treats it as the password)."
+
+  validation {
+    condition     = can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", trimspace(var.proxy_server_uuid)))
+    error_message = "proxy_server_uuid must be a non-empty UUID in the form xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx."
+  }
 }
 
 variable "playbook_branch" {
