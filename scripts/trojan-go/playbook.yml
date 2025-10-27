@@ -3,10 +3,6 @@
   become: yes
   become_method: sudo
   tasks:
-    # - name: Wait for instance to be ready
-    #   wait_for_connection:
-    #     timeout: 300
-
     - name: Remove previous trojan-go-caddy Directory
       ansible.builtin.file:
         state: absent
@@ -20,13 +16,6 @@
         clone: yes
       tags:
         - trojan
-
-    # - name: Create debug.log
-    #   ansible.builtin.file:
-    #     path: /opt/debug.log
-    #     state: touch
-    #   tags:
-    #     - trojan
 
     - name: Update Namecheap Record
       become_user: root
@@ -58,26 +47,26 @@
         chdir: /opt/trojan-go-caddy
       tags:
         - trojan
-    
+
     - name: Add Docker GPG apt Key
-      apt_key:
+      ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
-      tags: 
+      tags:
         - docker
-  
+
     - name: Get Ubuntu Code Name
       ansible.builtin.shell: lsb_release -sc
       register: code_name_result
-      tags: 
+      tags:
         - docker
 
     - name: Add Docker Repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb https://download.docker.com/linux/ubuntu {{ code_name_result.stdout }} stable"
         state: present
         update_cache: no
-      tags: 
+      tags:
         - docker
 
     - name: Install docker ce packages
@@ -91,35 +80,18 @@
           docker-buildx-plugin \
           docker-compose-plugin
       register: apt_install_docker_ce
-      tags: 
+      tags:
         - docker
 
     - name: Add "ubuntu" user to "docker" group
       ansible.builtin.user:
         name: "{{ username }}"
-        groups: 
+        groups:
           - docker
         append: yes
       tags:
         - docker
 
-    # - name: Install docker-compose from official github repo
-    #   get_url:
-    #     url : https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
-    #     dest: /usr/local/bin/docker-compose
-    #     mode: 'u+x,g+x'
-    #   tags:
-    #     - docker
-
-    # - name: Create docker-compose symbolic link
-    #   ansible.builtin.file:
-    #     src: /usr/local/bin/docker-compose
-    #     dest: /usr/bin/docker-compose
-    #     group: docker
-    #     state: link
-    #   tags:
-    #     - docker
-    
     - name: Start and enable Docker service
       ansible.builtin.service:
         name: docker
@@ -128,19 +100,10 @@
       tags:
         - docker
 
-    # install with apt install
-    # - name: Install Python Docker Module for Ansible
-    #   pip:
-    #     name: 
-    #       - docker
-    #       - docker-compose
-    #   tags:
-    #     - docker
-
     - name: Trojan Go Down
       community.docker.docker_compose_v2:
         project_src: /opt/trojan-go-caddy
-        files: 
+        files:
           - docker-compose_trojan-go.yml
         state: absent
       tags:
@@ -150,7 +113,7 @@
     - name: Trojan Go Up
       community.docker.docker_compose_v2:
         project_src: /opt/trojan-go-caddy
-        files: 
+        files:
           - docker-compose_trojan-go.yml
         state: present
       tags:
