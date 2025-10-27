@@ -7,9 +7,10 @@ This project provisions and maintains a Lightsail instance, associates a static 
 ## Prerequisites ✅
 
 - A Namecheap domain with Dynamic DNS enabled and at least one A record created for the subdomain you plan to use.
-- Terraform >= 1.5, AWS credentials with Lightsail permissions, and the AWS CLI profile referenced in your variables (`lightsail-proxy/config.tf:1`).
+- Terraform 1.6.6 (matches the automated checks), AWS credentials with Lightsail permissions, and the AWS CLI profile referenced in your variables (`lightsail-proxy/config.tf:1`).
 - SSH key pair: the public key will be imported into Lightsail and the private key will be used for SSH/Mosh connections (`lightsail-proxy/variables.tf:38`).
 - Optional but handy: `mosh` installed locally to use the generated command in the outputs.
+- Optional caching boost: export `TF_PLUGIN_CACHE_DIR` to reuse Terraform provider downloads locally (the CI workflow stores plugins the same way for faster validation).
 
 ## Configuration Files 🛠️
 
@@ -82,6 +83,11 @@ Example session:
 3. **Deploy**: `./tf_action.sh deploy expresso apply` (or `deploy-auto` when running unattended).
 4. **Connect**: Grab the `ssh-connect` command from Terraform outputs and log in.
 5. **Cycle the host**: Re-run `deploy-auto expresso apply` whenever you need a fresh instance; the static IP and DNS records remain intact.
+
+## Continuous Integration 🔄
+
+- Every pull request runs the **Terraform Validate** GitHub Actions workflow, which performs `terraform init -backend=false` followed by `terraform validate` using Terraform 1.6.6.
+- To match CI locally, run the same commands from the repository root and consider exporting `TF_PLUGIN_CACHE_DIR` so Terraform can reuse provider downloads between runs.
 
 ## Troubleshooting 🧯
 
