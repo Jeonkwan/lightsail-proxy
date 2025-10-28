@@ -6,7 +6,7 @@ This project provisions and maintains a Lightsail instance, associates a static 
 
 ## Prerequisites ✅
 
-- A Namecheap domain with Dynamic DNS enabled and at least one A record created for the subdomain you plan to use.
+- A Namecheap domain with Dynamic DNS enabled and at least one A record created for the subdomain you plan to use (skip the Dynamic DNS token when deploying `less-vision-reality`, which talks directly to the Lightsail static IP).
 - Terraform 1.6.6 (matches the automated checks), AWS credentials with Lightsail permissions, and the AWS CLI profile referenced in your variables (`lightsail-proxy/config.tf:1`).
 - SSH key pair: the public key will be imported into Lightsail and the private key will be used for SSH/Mosh connections (`lightsail-proxy/variables.tf:38`).
 - Optional but handy: `mosh` installed locally to use the generated command in the outputs.
@@ -22,22 +22,25 @@ This project provisions and maintains a Lightsail instance, associates a static 
   - `instance_customizable_name` becomes part of the instance name.
   - `ssh_public_key_path` / `ssh_private_key_path` point at your key pair.
   - Domain-related settings feed directly into the user data template so the VM can update DNS and configure certificates.
-  - `proxy_solution` selects which automation stack boots on the instance (`trojan-go` or `less-vision`).
-  - `proxy_contact_email` stays optional for Trojan-Go but is required when `proxy_solution = "less-vision"` so Let’s Encrypt can send certificate notices.
+- `proxy_solution` selects which automation stack boots on the instance (`trojan-go`, `less-vision`, or `less-vision-reality`).
+- `proxy_contact_email` stays optional for Trojan-Go and `less-vision-reality` but is required when `proxy_solution = "less-vision"` so Let’s Encrypt can send certificate notices.
+- Selecting `less-vision-reality` also requires `less_vision_reality_short_ids` (one or more comma-separated Reality short IDs) and the matching base64-encoded Reality key pair (`less_vision_reality_private_key`/`less_vision_reality_public_key`).
+- Optional: `less_vision_reality_decoy_domain` overrides the Reality SNI/decoy domain passed to the playbook. The default is `web.wechat.com`, mirroring the upstream repository.
 
 ### Choosing a proxy solution
 
-| Capability / Variable                | `trojan-go`                                                                 | `less-vision`                                                                                               |
-|--------------------------------------|------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| `proxy_solution`                     | Set to `"trojan-go"` (default).                                             | Set to `"less-vision"`.                                                                                    |
-| Required contact email               | Optional `proxy_contact_email`; certificates are managed via built-in scripts.| Mandatory `proxy_contact_email` for ACME/Let’s Encrypt registration and expiry notices.                     |
-| Certificates                         | Self-manages via the Trojan-Go automation.                                  | ACME certificates issued on first boot; reruns on each replacement host.                                   |
-| Post-deploy services                 | Trojan-Go daemon + Nginx reverse proxy; exposes TCP/UDP 443 and 8990.        | less-vision container stack (Docker Compose) bootstrapped in `/opt/lightsail-proxy/less-vision`.           |
-| Workspace tfvars additions           | Provide a UUID via `proxy_server_uuid`; no extra toggles required.           | Provide the same `proxy_server_uuid` plus a valid `proxy_contact_email` and ensure DNS points at the host. |
+| Capability / Variable                | `trojan-go`                                                                 | `less-vision`                                                                                               | `less-vision-reality`                                                                                                  |
+|--------------------------------------|------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| `proxy_solution`                     | Set to `"trojan-go"` (default).                                             | Set to `"less-vision"`.                                                                                    | Set to `"less-vision-reality"`.                                                                                        |
+| Required contact email               | Optional `proxy_contact_email`; certificates are managed via built-in scripts.| Mandatory `proxy_contact_email` for ACME/Let’s Encrypt registration and expiry notices.                     | Optional; Reality handshakes do not require an email address.                                                          |
+| Certificates / Reality keys          | Self-manages via the Trojan-Go automation.                                  | ACME certificates issued on first boot; reruns on each replacement host.                                   | Consumes the Reality short IDs and key pair you provide, then persists them under `/opt/lightsail-proxy/less-vision-reality/credentials.json`. |
+| Decoy / SNI override                 | N/A                                                                          | N/A                                                                                                         | Optional `less_vision_reality_decoy_domain` input defaults to `web.wechat.com` and is forwarded as the Reality SNI. |
+| Post-deploy services                 | Trojan-Go daemon + Nginx reverse proxy; exposes TCP/UDP 443 and 8990.        | less-vision container stack (Docker Compose) bootstrapped in `/opt/lightsail-proxy/less-vision`.           | Xray Reality/Vision Docker Compose stack under `/opt/lightsail-proxy/less-vision-reality`.                             |
+| Workspace tfvars additions           | Provide a UUID via `proxy_server_uuid`; no extra toggles required.           | Provide the same `proxy_server_uuid` plus a valid `proxy_contact_email` and ensure DNS points at the host. | Provide the shared `proxy_server_uuid` along with `less_vision_reality_short_ids` and the base64 Reality key pair. Dynamic DNS inputs are ignored. |
 
 Each workspace-specific tfvars file only needs to override the variables that differ from `defaults.tfvars`. For example:
 
-After `terraform apply`, the Trojan-Go variant publishes TLS and proxy endpoints immediately; verify with `sudo systemctl status trojan-go` and expect TCP/UDP 443 plus TCP 8990 to respond externally. The less-vision deployment launches a Docker Compose application that serves the dashboard and proxy service once certificates issue—check `sudo docker compose ps` under `/opt/lightsail-proxy/less-vision` for healthy containers.
+After `terraform apply`, the Trojan-Go variant publishes TLS and proxy endpoints immediately; verify with `sudo systemctl status trojan-go` and expect TCP/UDP 443 plus TCP 8990 to respond externally. The less-vision deployment launches a Docker Compose application that serves the dashboard and proxy service once certificates issue—check `sudo docker compose ps` under `/opt/lightsail-proxy/less-vision` for healthy containers. The less-vision-reality deployment likewise relies on Docker Compose; inspect `/opt/lightsail-proxy/less-vision-reality` for the `credentials.json` file (it stores the Reality values you supplied) and run `sudo docker compose ps` there to confirm the Xray service is running.
 
 ```hcl
 # expresso.tfvars
@@ -60,6 +63,20 @@ namecheap_ddns_password = "<generated-token>"
 proxy_server_uuid       = "11111111-1111-1111-1111-111111111111"
 proxy_solution          = "less-vision"
 proxy_contact_email     = "admin@example.com"
+
+# expresso.less-vision-reality.tfvars
+selected_country        = "japan"
+selected_zone           = "b"
+instance_customizable_name = "expresso-lvr"
+domain_name             = "example.com"
+subdomain_name          = "jp-reality"
+namecheap_ddns_password = "" # Optional when proxy_solution = "less-vision-reality"
+proxy_server_uuid       = "22222222-2222-2222-2222-222222222222"
+proxy_solution          = "less-vision-reality"
+less_vision_reality_short_ids = ["01234567", "89abcdef"]
+less_vision_reality_private_key = "BASE64_PRIVATE_KEY"
+less_vision_reality_public_key  = "BASE64_PUBLIC_KEY"
+less_vision_reality_decoy_domain = "web.wechat.com"
 ```
 
 Feel free to create additional files (e.g., `latte.tfvars`) to represent unique environments—just ensure each includes the new `proxy_solution` flag so Terraform can select the correct bootstrap logic.
@@ -68,6 +85,7 @@ Feel free to create additional files (e.g., `latte.tfvars`) to represent unique 
 
 - `scripts/trojan-go/` contains the bootstrap shell wrapper and Ansible playbook that previously lived in `setup_env.yaml`. The script downloads the playbook, pipes Terraform-provided variables into JSON, and executes everything locally with consistent logging.
 - `scripts/less-vision/` mirrors that structure for the [less-vision](https://github.com/Jeonkwan/less-vision) project. Its bootstrap script clones the upstream repository into `/opt/lightsail-proxy/less-vision`, builds the required `--extra-vars`, and invokes the bundled playbook without touching Trojan-Go resources.
+- `scripts/less-vision-reality/` provisions the [less-vision-reality](https://github.com/Jeonkwan/less-vision-reality) stack. It clones the repository, consumes the Reality short IDs and key pair you supplied, writes them to `/opt/lightsail-proxy/less-vision-reality/credentials.json`, and executes the upstream Ansible playbook.
 
 ### Workspaces & state
 
@@ -93,7 +111,7 @@ State is kept per workspace inside `terraform.tfstate.d`, so you can run several
 3. **Lightsail resources** (`lightsail-proxy/lightsail.tf:4`)
    - `aws_lightsail_static_ip` reserves an address and `aws_lightsail_static_ip_attachment` attaches it to the VM.
    - `aws_lightsail_key_pair` imports your SSH public key for console access.
-  - `aws_lightsail_instance` provisions the Ubuntu host and injects cloud-init user data from `scripts/cloud-init/setup_ubuntu.sh.tftpl`. The template now wires domain, subdomain, Namecheap token, the shared proxy server UUID, `proxy_solution`, and (when required) `proxy_contact_email` into the script. `scripts/cloud-init/setup_ubuntu.sh.tftpl` installs common prerequisites once and then downloads the matching solution bootstrap (`scripts/trojan-go/setup.sh` or `scripts/less-vision/setup.sh`) before running its Ansible playbook. This indirection keeps the per-solution automation thin while guaranteeing every instance starts from the same base image and dependency set.
+  - `aws_lightsail_instance` provisions the Ubuntu host and injects cloud-init user data from `scripts/cloud-init/setup_ubuntu.sh.tftpl`. The template now wires domain, subdomain, Namecheap token, the shared proxy server UUID, `proxy_solution`, and (when required) `proxy_contact_email` into the script. `scripts/cloud-init/setup_ubuntu.sh.tftpl` installs common prerequisites once and then downloads the matching solution bootstrap (`scripts/trojan-go/setup.sh`, `scripts/less-vision/setup.sh`, or `scripts/less-vision-reality/setup.sh`) before running its Ansible playbook. This indirection keeps the per-solution automation thin while guaranteeing every instance starts from the same base image and dependency set.
    - `aws_lightsail_instance_public_ports` opens SSH (22), HTTP (80), HTTPS (443), UDP/TCP proxy ports (8990), and a UDP range used by Mosh (60000-60010).
 
 4. **Outputs** (`lightsail-proxy/output.tf:1`)

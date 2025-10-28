@@ -11,6 +11,10 @@ PROXY_SERVER_UUID="${proxy_server_uuid}"
 PLAYBOOK_BRANCH="${playbook_branch}"
 PROXY_SOLUTION="${proxy_solution}"
 PROXY_CONTACT_EMAIL="${proxy_contact_email}"
+LESS_VISION_REALITY_SHORT_IDS="${less_vision_reality_short_ids}"
+LESS_VISION_REALITY_PRIVATE_KEY="${less_vision_reality_private_key}"
+LESS_VISION_REALITY_PUBLIC_KEY="${less_vision_reality_public_key}"
+LESS_VISION_REALITY_DECOY_DOMAIN="${less_vision_reality_decoy_domain}"
 
 export DEBIAN_FRONTEND="noninteractive"
 apt-get update
@@ -76,6 +80,20 @@ case "$PROXY_SOLUTION" in
             --uuid "$PROXY_SERVER_UUID" \
             --email "$PROXY_CONTACT_EMAIL" \
             --asset-base-url "$${BASE_URL}/$${SOLUTION_DIR}"
+        ;;
+    less-vision-reality)
+        SOLUTION_DIR="less-vision-reality"
+        SETUP_PATH="$${SOLUTIONS_DIR}/$${SOLUTION_DIR}/setup.sh"
+        TMP_SCRIPT=$(mktemp)
+        curl -fsSL "$${BASE_URL}/$${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
+        install -m 0755 "$TMP_SCRIPT" "$SETUP_PATH"
+        rm -f "$TMP_SCRIPT"
+        "$SETUP_PATH" \
+            --uuid "$PROXY_SERVER_UUID" \
+            --xray-short-ids "$LESS_VISION_REALITY_SHORT_IDS" \
+            --xray-private-key "$LESS_VISION_REALITY_PRIVATE_KEY" \
+            --xray-public-key "$LESS_VISION_REALITY_PUBLIC_KEY" \
+            --xray-sni "$LESS_VISION_REALITY_DECOY_DOMAIN"
         ;;
     *)
         echo "Unsupported proxy_solution: $${PROXY_SOLUTION}" >&2
