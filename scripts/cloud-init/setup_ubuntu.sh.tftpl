@@ -1,5 +1,6 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+
+set -eu
 set -x
 
 USERNAME="${username}"
@@ -16,9 +17,40 @@ LESS_VISION_REALITY_PRIVATE_KEY="${less_vision_reality_private_key}"
 LESS_VISION_REALITY_PUBLIC_KEY="${less_vision_reality_public_key}"
 LESS_VISION_REALITY_DECOY_DOMAIN="${less_vision_reality_decoy_domain}"
 
+wait_for_apt() {
+    # Lightsail images often run unattended upgrades on first boot; wait until locks clear.
+    while fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
+        || fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
+        || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 \
+        || fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+        sleep 5
+    done
+}
+
+retry() {
+    attempts=$1
+    shift
+    delay=$1
+    shift
+    n=0
+    while true; do
+        if "$@"; then
+            return 0
+        fi
+        n=$((n + 1))
+        if [ "$n" -ge "$attempts" ]; then
+            echo "Command failed after $attempts attempts: $*" >&2
+            return 1
+        fi
+        sleep "$delay"
+    done
+}
+
 export DEBIAN_FRONTEND="noninteractive"
-apt-get update
-apt-get install --no-install-recommends -y \
+wait_for_apt
+retry 5 10 apt-get update
+wait_for_apt
+retry 5 10 apt-get install --no-install-recommends -y \
     at \
     vim \
     uuid \
@@ -36,15 +68,16 @@ apt-get install --no-install-recommends -y \
     cron \
     git
 
-if [[ ! -d /opt/venv-gcp-proxy ]]; then
+if [ ! -d /opt/venv-gcp-proxy ]; then
     python3 -m venv /opt/venv-gcp-proxy
 fi
+VENV_PYTHON="/opt/venv-gcp-proxy/bin/python"
 export PATH="/opt/venv-gcp-proxy/bin/:$PATH"
-pip install --upgrade pip
-pip install \
+"$VENV_PYTHON" -m pip install --upgrade pip
+"$VENV_PYTHON" -m pip install \
     ansible \
     docker
-ansible-galaxy collection install community.docker
+/opt/venv-gcp-proxy/bin/ansible-galaxy collection install community.docker
 
 SOLUTIONS_DIR="/opt/lightsail-proxy"
 mkdir -p "$SOLUTIONS_DIR"
@@ -54,6 +87,7 @@ case "$PROXY_SOLUTION" in
     trojan-go)
         SOLUTION_DIR="trojan-go"
         SETUP_PATH="$${SOLUTIONS_DIR}/$${SOLUTION_DIR}/setup.sh"
+        mkdir -p "$${SOLUTIONS_DIR}/$${SOLUTION_DIR}"
         TMP_SCRIPT=$(mktemp)
         curl -fsSL "$${BASE_URL}/$${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
         install -m 0755 "$TMP_SCRIPT" "$SETUP_PATH"
@@ -70,6 +104,7 @@ case "$PROXY_SOLUTION" in
     less-vision)
         SOLUTION_DIR="less-vision"
         SETUP_PATH="$${SOLUTIONS_DIR}/$${SOLUTION_DIR}/setup.sh"
+        mkdir -p "$${SOLUTIONS_DIR}/$${SOLUTION_DIR}"
         TMP_SCRIPT=$(mktemp)
         curl -fsSL "$${BASE_URL}/$${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
         install -m 0755 "$TMP_SCRIPT" "$SETUP_PATH"
@@ -84,6 +119,7 @@ case "$PROXY_SOLUTION" in
     less-vision-reality)
         SOLUTION_DIR="less-vision-reality"
         SETUP_PATH="$${SOLUTIONS_DIR}/$${SOLUTION_DIR}/setup.sh"
+        mkdir -p "$${SOLUTIONS_DIR}/$${SOLUTION_DIR}"
         TMP_SCRIPT=$(mktemp)
         curl -fsSL "$${BASE_URL}/$${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
         install -m 0755 "$TMP_SCRIPT" "$SETUP_PATH"

@@ -161,6 +161,7 @@ export CREDS_SNI="$XRAY_SNI"
 python3 - <<'PY' > "$CREDENTIALS_FILE"
 import json
 import os
+import sys
 from datetime import datetime
 
 payload = {
