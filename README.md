@@ -86,14 +86,14 @@ State is kept per workspace inside `terraform.tfstate.d`, so you can run several
    ```
 
    Terraform computes a new timestamp each time the plan runs, so the `name` field changes and forces a replace of the Lightsail instance. The replacement chain does **not** affect the static IP because `aws_lightsail_static_ip.instance_ip` (`lightsail-proxy/lightsail.tf:9`) and `aws_lightsail_static_ip_attachment.lightsail_instance_ip_attachment` (`lightsail-proxy/lightsail.tf:4`) keep the same identifiers. During `terraform apply` Terraform churns the instance while leaving the static IP mapped, which gives you a blue/green-style refresh:
-   - The OS boots from scratch each run, reapplying `setup_ubuntu.sh.tftpl`.
+   - The OS boots from scratch each run, reapplying `scripts/cloud-init/setup_ubuntu.sh.tftpl`.
    - TLS certificates and proxy services are renewed automatically because the user-data script reenrolls everything on first boot.
    - Existing clients keep working once the new instance finishes provisioning, since DNS and IP remain unchanged.
 
 3. **Lightsail resources** (`lightsail-proxy/lightsail.tf:4`)
    - `aws_lightsail_static_ip` reserves an address and `aws_lightsail_static_ip_attachment` attaches it to the VM.
    - `aws_lightsail_key_pair` imports your SSH public key for console access.
-  - `aws_lightsail_instance` provisions the Ubuntu host and injects cloud-init user data from `setup_ubuntu.sh.tftpl`. The template now wires domain, subdomain, Namecheap token, the shared proxy server UUID, `proxy_solution`, and (when required) `proxy_contact_email` into the script. `setup_ubuntu.sh.tftpl` installs common prerequisites once and then downloads the matching solution bootstrap (`scripts/trojan-go/setup.sh` or `scripts/less-vision/setup.sh`) before running its Ansible playbook.
+  - `aws_lightsail_instance` provisions the Ubuntu host and injects cloud-init user data from `scripts/cloud-init/setup_ubuntu.sh.tftpl`. The template now wires domain, subdomain, Namecheap token, the shared proxy server UUID, `proxy_solution`, and (when required) `proxy_contact_email` into the script. `scripts/cloud-init/setup_ubuntu.sh.tftpl` installs common prerequisites once and then downloads the matching solution bootstrap (`scripts/trojan-go/setup.sh` or `scripts/less-vision/setup.sh`) before running its Ansible playbook. This indirection keeps the per-solution automation thin while guaranteeing every instance starts from the same base image and dependency set.
    - `aws_lightsail_instance_public_ports` opens SSH (22), HTTP (80), HTTPS (443), UDP/TCP proxy ports (8990), and a UDP range used by Mosh (60000-60010).
 
 4. **Outputs** (`lightsail-proxy/output.tf:1`)
@@ -145,3 +145,29 @@ Example session:
 - **less-vision Docker Compose services**: Log in and run `cd /opt/lightsail-proxy/less-vision && sudo docker compose ps` to check container status. Use `sudo docker compose logs <service>` if any container repeatedly restarts.
 
 Happy proxying! 🛡️💻
+
+## Bootstrap flow & runtime hand-off 🔄
+
+The repository now treats `scripts/cloud-init/setup_ubuntu.sh.tftpl` as the universal entry point for every Terraform-managed instance. The template is rendered with the values from your `.tfvars` file and shipped to Lightsail as user data so that the operating system configures itself on first boot:
+
+1. **Cloud-init stage** – Installs foundational packages (Python, Ansible, community Docker collection, logging directories) and exports Terraform-rendered variables to `/etc/profile.d` for troubleshooting.
+2. **Solution fetch** – Downloads the solution-specific wrapper from this repository at the branch Terraform provided. The wrapper lives under `scripts/<solution>/setup.sh` and only cares about its own stack.
+3. **Hand-off** – Executes the wrapper with the rendered variables. Each solution builds its Ansible inventory, applies its playbook, and idempotently configures the proxy services.
+
+Because the cloud-init layer owns the shared prerequisites, each solution directory can focus solely on its distinct automation without duplicating boilerplate or secret handling logic.
+
+```mermaid
+flowchart TD
+    terraform(Terraform apply) -->|render user data| cloudInit[scripts/cloud-init/setup_ubuntu.sh.tftpl]
+    cloudInit -->|install base tooling| base[Ubuntu base image]
+    cloudInit -->|download wrapper| wrapper[scripts/trojan-go/setup.sh<br/>or<br/>scripts/less-vision/setup.sh]
+    wrapper -->|invoke Ansible| playbook[Solution playbook & assets]
+    playbook --> services[Running proxy services]
+```
+
+### FAQ: Why keep the cloud-init template?
+
+- **Single source of truth for prerequisites** – Package installs, virtualenv setup, and shared environment variables are implemented once instead of being copy/pasted into every solution.
+- **Safer secret distribution** – Terraform injects sensitive values (Namecheap token, proxy UUID, contact email) into the template so the secrets stay transient and only touch the VM that needs them.
+- **Predictable rebuilds** – Each `terraform apply` replaces the instance with a fresh host that replays the same cloud-init script, guaranteeing that Trojan-Go and less-vision stay in sync with the repository.
+- **Future expansion** – Adding another solution only requires creating `scripts/<new-solution>/setup.sh` plus its playbook; cloud-init will handle detection and dispatching once `proxy_solution` points to it.

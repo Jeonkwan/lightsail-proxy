@@ -51,7 +51,7 @@ resource "aws_lightsail_instance" "lightsail_instance" {
   bundle_id         = var.machine_config["instance_type"]
   key_pair_name     = aws_lightsail_key_pair.ssh.name
   user_data = templatefile(
-    "${path.root}/setup_ubuntu.sh.tftpl",
+    "${path.module}/scripts/cloud-init/setup_ubuntu.sh.tftpl",
     {
       username                = var.machine_config["nonroot_username"],
       domain_name             = var.domain_name,
