@@ -1,5 +1,6 @@
 locals {
-  instance_name = "${var.instance_name_prefix}-${var.selected_country}-${var.zones[var.selected_zone]}-${var.instance_customizable_name}"
+  instance_name                  = "${var.instance_name_prefix}-${var.selected_country}-${var.zones[var.selected_zone]}-${var.instance_customizable_name}"
+  proxy_solution_requires_ddns   = contains(["trojan-go", "less-vision"], var.proxy_solution)
 }
 
 resource "aws_lightsail_static_ip_attachment" "lightsail_instance_ip_attachment" {
@@ -12,6 +13,7 @@ resource "aws_lightsail_static_ip" "instance_ip" {
 }
 
 resource "null_resource" "namecheap_dns_update" {
+  count      = local.proxy_solution_requires_ddns ? 1 : 0
   depends_on = [aws_lightsail_static_ip.instance_ip]
 
   triggers = {
@@ -61,7 +63,11 @@ resource "aws_lightsail_instance" "lightsail_instance" {
       proxy_server_uuid       = var.proxy_server_uuid,
       playbook_branch         = var.playbook_branch,
       proxy_solution          = var.proxy_solution,
-      proxy_contact_email     = var.proxy_contact_email
+      proxy_contact_email     = var.proxy_contact_email,
+      less_vision_reality_short_ids = join(",", var.less_vision_reality_short_ids),
+      less_vision_reality_private_key = var.less_vision_reality_private_key,
+      less_vision_reality_public_key  = var.less_vision_reality_public_key,
+      less_vision_reality_decoy_domain = var.less_vision_reality_decoy_domain
     }
   )
 
@@ -69,6 +75,20 @@ resource "aws_lightsail_instance" "lightsail_instance" {
     precondition {
       condition     = var.proxy_solution != "less-vision" || length(trimspace(var.proxy_contact_email)) > 0
       error_message = "proxy_contact_email must be provided when proxy_solution is set to less-vision."
+    }
+    precondition {
+      condition = var.proxy_solution != "less-vision-reality" || (
+        length(var.less_vision_reality_short_ids) > 0 &&
+        alltrue([for id in var.less_vision_reality_short_ids : length(trimspace(id)) > 0])
+      )
+      error_message = "less_vision_reality_short_ids must contain at least one non-empty value when proxy_solution is set to less-vision-reality."
+    }
+    precondition {
+      condition = var.proxy_solution != "less-vision-reality" || (
+        length(trimspace(var.less_vision_reality_private_key)) > 0 &&
+        length(trimspace(var.less_vision_reality_public_key)) > 0
+      )
+      error_message = "less-vision-reality requires both less_vision_reality_private_key and less_vision_reality_public_key."
     }
   }
 
