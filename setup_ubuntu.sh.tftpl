@@ -44,14 +44,14 @@ ansible-galaxy collection install community.docker
 
 SOLUTIONS_DIR="/opt/lightsail-proxy"
 mkdir -p "$SOLUTIONS_DIR"
-BASE_URL="https://raw.githubusercontent.com/Jeonkwan/lightsail-proxy/${PLAYBOOK_BRANCH}/scripts"
+BASE_URL="https://raw.githubusercontent.com/Jeonkwan/lightsail-proxy/$${PLAYBOOK_BRANCH}/scripts"
 
 case "$PROXY_SOLUTION" in
     trojan-go)
         SOLUTION_DIR="trojan-go"
-        SETUP_PATH="${SOLUTIONS_DIR}/${SOLUTION_DIR}/setup.sh"
+        SETUP_PATH="$${SOLUTIONS_DIR}/$${SOLUTION_DIR}/setup.sh"
         TMP_SCRIPT=$(mktemp)
-        curl -fsSL "${BASE_URL}/${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
+        curl -fsSL "$${BASE_URL}/$${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
         install -m 0755 "$TMP_SCRIPT" "$SETUP_PATH"
         rm -f "$TMP_SCRIPT"
         "$SETUP_PATH" \
@@ -61,13 +61,13 @@ case "$PROXY_SOLUTION" in
             --public-ip "$PUBLIC_IP" \
             --ddns-password "$NC_DDNS_PASS" \
             --uuid "$PROXY_SERVER_UUID" \
-            --asset-base-url "${BASE_URL}/${SOLUTION_DIR}"
+            --asset-base-url "$${BASE_URL}/$${SOLUTION_DIR}"
         ;;
     less-vision)
         SOLUTION_DIR="less-vision"
-        SETUP_PATH="${SOLUTIONS_DIR}/${SOLUTION_DIR}/setup.sh"
+        SETUP_PATH="$${SOLUTIONS_DIR}/$${SOLUTION_DIR}/setup.sh"
         TMP_SCRIPT=$(mktemp)
-        curl -fsSL "${BASE_URL}/${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
+        curl -fsSL "$${BASE_URL}/$${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
         install -m 0755 "$TMP_SCRIPT" "$SETUP_PATH"
         rm -f "$TMP_SCRIPT"
         "$SETUP_PATH" \
@@ -75,10 +75,10 @@ case "$PROXY_SOLUTION" in
             --subdomain "$SUBDOMAIN" \
             --uuid "$PROXY_SERVER_UUID" \
             --email "$PROXY_CONTACT_EMAIL" \
-            --asset-base-url "${BASE_URL}/${SOLUTION_DIR}"
+            --asset-base-url "$${BASE_URL}/$${SOLUTION_DIR}"
         ;;
     *)
-        echo "Unsupported proxy_solution: ${PROXY_SOLUTION}" >&2
+        echo "Unsupported proxy_solution: $${PROXY_SOLUTION}" >&2
         exit 1
         ;;
 esac
