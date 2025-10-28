@@ -129,7 +129,8 @@ case "$PROXY_SOLUTION" in
             --xray-short-ids "$LESS_VISION_REALITY_SHORT_IDS" \
             --xray-private-key "$LESS_VISION_REALITY_PRIVATE_KEY" \
             --xray-public-key "$LESS_VISION_REALITY_PUBLIC_KEY" \
-            --xray-sni "$LESS_VISION_REALITY_DECOY_DOMAIN"
+            --xray-sni "$LESS_VISION_REALITY_DECOY_DOMAIN" \
+            --docker-user "$USERNAME"
         ;;
     *)
         echo "Unsupported proxy_solution: $${PROXY_SOLUTION}" >&2

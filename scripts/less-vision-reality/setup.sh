@@ -30,6 +30,7 @@ Options:
   --repo-url <url>     Git repository URL for less-vision-reality (default: https://github.com/Jeonkwan/less-vision-reality.git)
   --repo-branch <name> Git branch or tag to checkout (default: main)
   --xray-sni <domain>  Optional decoy SNI/domain forwarded to the playbook (default: web.wechat.com)
+  --docker-user <user> Local user account that should be granted Docker access (default: ubuntu)
 USAGE
 }
 
@@ -40,6 +41,7 @@ XRAY_PUBLIC_KEY=""
 XRAY_SNI="web.wechat.com"
 REPO_URL="https://github.com/Jeonkwan/less-vision-reality.git"
 REPO_BRANCH="main"
+DOCKER_USER="ubuntu"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -69,6 +71,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --xray-sni)
       XRAY_SNI="$2"
+      shift 2
+      ;;
+    --docker-user)
+      DOCKER_USER="$2"
       shift 2
       ;;
     --help|-h)
@@ -138,6 +144,7 @@ export EXTRA_SHORT_IDS_JSON="$XRAY_SHORT_IDS_JSON"
 export EXTRA_PRIVATE_KEY="$XRAY_PRIVATE_KEY"
 export EXTRA_PUBLIC_KEY="$XRAY_PUBLIC_KEY"
 export EXTRA_SNI="$XRAY_SNI"
+export EXTRA_DOCKER_USER="$DOCKER_USER"
 python3 - <<'PY' > "$EXTRA_VARS_FILE"
 import json
 import os
@@ -148,10 +155,11 @@ payload = {
     "xray_reality_private_key": os.environ["EXTRA_PRIVATE_KEY"],
     "xray_reality_public_key": os.environ["EXTRA_PUBLIC_KEY"],
     "xray_sni": os.environ["EXTRA_SNI"],
+    "xray_common_docker_user": os.environ["EXTRA_DOCKER_USER"],
 }
 json.dump(payload, sys.stdout)
 PY
-unset EXTRA_UUID EXTRA_SHORT_IDS_JSON EXTRA_PRIVATE_KEY EXTRA_PUBLIC_KEY EXTRA_SNI
+unset EXTRA_UUID EXTRA_SHORT_IDS_JSON EXTRA_PRIVATE_KEY EXTRA_PUBLIC_KEY EXTRA_SNI EXTRA_DOCKER_USER
 
 log "Persisting credentials to ${CREDENTIALS_FILE}"
 export CREDS_UUID="$UUID"
