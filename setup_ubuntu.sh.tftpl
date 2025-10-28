@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -xe
+set -euo pipefail
+set -x
 
 USERNAME="${username}"
 DOMAIN="${domain_name}"
@@ -8,9 +9,9 @@ PUBLIC_IP="${public_ip}"
 NC_DDNS_PASS="${namecheap_ddns_password}"
 PROXY_SERVER_UUID="${proxy_server_uuid}"
 PLAYBOOK_BRANCH="${playbook_branch}"
+PROXY_SOLUTION="${proxy_solution}"
+PROXY_CONTACT_EMAIL="${proxy_contact_email}"
 
-# minimum setup
-# add-apt-repository ppa:ansible/ansible -y
 export DEBIAN_FRONTEND="noninteractive"
 apt-get update
 apt-get install --no-install-recommends -y \
@@ -31,15 +32,53 @@ apt-get install --no-install-recommends -y \
     cron \
     git
 
-python3 -m venv /opt/venv-gcp-proxy
+if [[ ! -d /opt/venv-gcp-proxy ]]; then
+    python3 -m venv /opt/venv-gcp-proxy
+fi
 export PATH="/opt/venv-gcp-proxy/bin/:$PATH"
+pip install --upgrade pip
 pip install \
     ansible \
     docker
 ansible-galaxy collection install community.docker
 
-curl \
-    -L https://raw.githubusercontent.com/Jeonkwan/lightsail-proxy/$PLAYBOOK_BRANCH/setup_env.yaml \
-    -o /opt/setup_env.yaml
+SOLUTIONS_DIR="/opt/lightsail-proxy"
+mkdir -p "$SOLUTIONS_DIR"
+BASE_URL="https://raw.githubusercontent.com/Jeonkwan/lightsail-proxy/$${PLAYBOOK_BRANCH}/scripts"
 
-ansible-playbook -vvv --connection=local --inventory '127.0.0.1,' --limit 127.0.0.1 --extra-vars "username=$USERNAME domain_name=$DOMAIN subdomain_name=$SUBDOMAIN public_ip=$PUBLIC_IP namecheap_ddns_password=$NC_DDNS_PASS proxy_server_uuid=$PROXY_SERVER_UUID" /opt/setup_env.yaml
+case "$PROXY_SOLUTION" in
+    trojan-go)
+        SOLUTION_DIR="trojan-go"
+        SETUP_PATH="$${SOLUTIONS_DIR}/$${SOLUTION_DIR}/setup.sh"
+        TMP_SCRIPT=$(mktemp)
+        curl -fsSL "$${BASE_URL}/$${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
+        install -m 0755 "$TMP_SCRIPT" "$SETUP_PATH"
+        rm -f "$TMP_SCRIPT"
+        "$SETUP_PATH" \
+            --username "$USERNAME" \
+            --domain "$DOMAIN" \
+            --subdomain "$SUBDOMAIN" \
+            --public-ip "$PUBLIC_IP" \
+            --ddns-password "$NC_DDNS_PASS" \
+            --uuid "$PROXY_SERVER_UUID" \
+            --asset-base-url "$${BASE_URL}/$${SOLUTION_DIR}"
+        ;;
+    less-vision)
+        SOLUTION_DIR="less-vision"
+        SETUP_PATH="$${SOLUTIONS_DIR}/$${SOLUTION_DIR}/setup.sh"
+        TMP_SCRIPT=$(mktemp)
+        curl -fsSL "$${BASE_URL}/$${SOLUTION_DIR}/setup.sh" -o "$TMP_SCRIPT"
+        install -m 0755 "$TMP_SCRIPT" "$SETUP_PATH"
+        rm -f "$TMP_SCRIPT"
+        "$SETUP_PATH" \
+            --domain "$DOMAIN" \
+            --subdomain "$SUBDOMAIN" \
+            --uuid "$PROXY_SERVER_UUID" \
+            --email "$PROXY_CONTACT_EMAIL" \
+            --asset-base-url "$${BASE_URL}/$${SOLUTION_DIR}"
+        ;;
+    *)
+        echo "Unsupported proxy_solution: $${PROXY_SOLUTION}" >&2
+        exit 1
+        ;;
+esac

@@ -10,6 +10,8 @@ namecheap_ddns_password    = "youShouldPassItOnTheFly"
 # - Trojan-Go uses this value as the connection password.
 # - less-vision consumes it directly as the UUID.
 proxy_server_uuid          = "00000000-0000-4000-8000-000000000000"
+proxy_solution             = "trojan-go"
+proxy_contact_email        = "admin@example.com" # Required when proxy_solution = "less-vision"
 aws_cred_file_path         = "~/.aws/credentials"
 aws_conf_file_path         = "~/.aws/config"
 playbook_branch            = "main"

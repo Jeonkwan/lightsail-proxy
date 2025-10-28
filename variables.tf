@@ -90,6 +90,23 @@ variable "proxy_server_uuid" {
   }
 }
 
+variable "proxy_solution" {
+  type        = string
+  description = "Proxy solution to deploy. Supported values: trojan-go, less-vision."
+  default     = "trojan-go"
+
+  validation {
+    condition     = contains(["trojan-go", "less-vision"], var.proxy_solution)
+    error_message = "proxy_solution must be either \"trojan-go\" or \"less-vision\"."
+  }
+}
+
+variable "proxy_contact_email" {
+  type        = string
+  description = "Email address used by solutions that integrate with certificate authorities (required for less-vision)."
+  default     = ""
+}
+
 variable "playbook_branch" {
   type    = string
   default = "main"
