@@ -25,6 +25,45 @@ This project provisions and maintains a Lightsail instance, associates a static 
   - `proxy_solution` selects which automation stack boots on the instance (`trojan-go` or `less-vision`).
   - `proxy_contact_email` stays optional for Trojan-Go but is required when `proxy_solution = "less-vision"` so Let’s Encrypt can send certificate notices.
 
+### Choosing a proxy solution
+
+| Capability / Variable                | `trojan-go`                                                                 | `less-vision`                                                                                               |
+|--------------------------------------|------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| `proxy_solution`                     | Set to `"trojan-go"` (default).                                             | Set to `"less-vision"`.                                                                                    |
+| Required contact email               | Optional `proxy_contact_email`; certificates are managed via built-in scripts.| Mandatory `proxy_contact_email` for ACME/Let’s Encrypt registration and expiry notices.                     |
+| Certificates                         | Self-manages via the Trojan-Go automation.                                  | ACME certificates issued on first boot; reruns on each replacement host.                                   |
+| Post-deploy services                 | Trojan-Go daemon + Nginx reverse proxy; exposes TCP/UDP 443 and 8990.        | less-vision container stack (Docker Compose) bootstrapped in `/opt/lightsail-proxy/less-vision`.           |
+| Workspace tfvars additions           | Provide a UUID via `proxy_server_uuid`; no extra toggles required.           | Provide the same `proxy_server_uuid` plus a valid `proxy_contact_email` and ensure DNS points at the host. |
+
+Each workspace-specific tfvars file only needs to override the variables that differ from `defaults.tfvars`. For example:
+
+After `terraform apply`, the Trojan-Go variant publishes TLS and proxy endpoints immediately; verify with `sudo systemctl status trojan-go` and expect TCP/UDP 443 plus TCP 8990 to respond externally. The less-vision deployment launches a Docker Compose application that serves the dashboard and proxy service once certificates issue—check `sudo docker compose ps` under `/opt/lightsail-proxy/less-vision` for healthy containers.
+
+```hcl
+# expresso.tfvars
+selected_country        = "japan"
+selected_zone           = "b"
+instance_customizable_name = "expresso"
+domain_name             = "example.com"
+subdomain_name          = "jp-proxy"
+namecheap_ddns_password = "<generated-token>"
+proxy_server_uuid       = "00000000-0000-0000-0000-000000000000"
+proxy_solution          = "trojan-go"
+
+# expresso.less-vision.tfvars
+selected_country        = "japan"
+selected_zone           = "b"
+instance_customizable_name = "expresso-lv"
+domain_name             = "example.com"
+subdomain_name          = "jp-lv"
+namecheap_ddns_password = "<generated-token>"
+proxy_server_uuid       = "11111111-1111-1111-1111-111111111111"
+proxy_solution          = "less-vision"
+proxy_contact_email     = "admin@example.com"
+```
+
+Feel free to create additional files (e.g., `latte.tfvars`) to represent unique environments—just ensure each includes the new `proxy_solution` flag so Terraform can select the correct bootstrap logic.
+
 ### Proxy automation assets
 
 - `scripts/trojan-go/` contains the bootstrap shell wrapper and Ansible playbook that previously lived in `setup_env.yaml`. The script downloads the playbook, pipes Terraform-provided variables into JSON, and executes everything locally with consistent logging.
@@ -64,7 +103,7 @@ State is kept per workspace inside `terraform.tfstate.d`, so you can run several
 
 ## `tf_action.sh` Helper Script 🤖
 
-The script streamlines Terraform workflows with safety checks:
+Before running any helper command, double-check that the tfvars file you plan to use sets `proxy_solution` to the intended value. The script streamlines Terraform workflows with safety checks:
 
 - **Workspace validation** – Ensures the active workspace matches the `.tfvars` file you target.
 - **Init wrapper** – Keeps providers pinned via `.terraform.lock.hcl` by default and only upgrades when you export `TF_UPGRADE=true`.
@@ -101,5 +140,8 @@ Example session:
 - **Provider downloads**: The `.terraform.lock.hcl` file pins `hashicorp/aws` v6.16.0. If you intentionally want to upgrade, export `TF_UPGRADE=true` before running any `tf_action.sh` command.
 - **Workspace mismatch**: The script will warn you if the currently selected workspace differs from the tfvars you requested—fix by running `terraform workspace select <name>` or by creating the workspace on first run.
 - **SSH paths**: Make sure the private key path in your tfvars points to the matching private key (`.pub` is trimmed automatically when building output commands).
+- **Trojan-Go certificates**: If the Trojan-Go stack redeploys without a certificate, re-run the workspace with `proxy_solution = "trojan-go"` and confirm port 80 is reachable from the public internet so the bundled ACME script can validate ownership.
+- **less-vision certificate issuance**: Ensure `proxy_contact_email` is populated and the `domain_name`/`subdomain_name` A records resolve to the Lightsail static IP before boot. After deployment, you can verify renewal timers with `sudo systemctl status certbot.timer`.
+- **less-vision Docker Compose services**: Log in and run `cd /opt/lightsail-proxy/less-vision && sudo docker compose ps` to check container status. Use `sudo docker compose logs <service>` if any container repeatedly restarts.
 
 Happy proxying! 🛡️💻
