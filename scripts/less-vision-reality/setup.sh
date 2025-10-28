@@ -127,8 +127,9 @@ XRAY_SHORT_IDS_JSON=$(convert_short_ids_to_json)
 unset SHORT_IDS_RAW
 
 EXTRA_VARS_FILE=$(mktemp)
+INVENTORY_FILE=$(mktemp)
 cleanup() {
-  rm -f "$EXTRA_VARS_FILE"
+  rm -f "$EXTRA_VARS_FILE" "$INVENTORY_FILE"
 }
 trap cleanup EXIT
 
@@ -177,6 +178,11 @@ PY
 unset CREDS_UUID CREDS_SHORT_IDS_JSON CREDS_PRIVATE_KEY CREDS_PUBLIC_KEY CREDS_SNI
 chmod 0600 "$CREDENTIALS_FILE"
 
+cat <<'EOF' > "$INVENTORY_FILE"
+[xray_servers]
+127.0.0.1 ansible_connection=local ansible_python_interpreter=/usr/bin/python3
+EOF
+
 log "Running Ansible playbook for ${SOLUTION}"
 (
   cd "$REPO_DIR"
@@ -184,6 +190,7 @@ log "Running Ansible playbook for ${SOLUTION}"
   ANSIBLE_RETRY_FILES_ENABLED=0 \
   ANSIBLE_CONFIG="$REPO_DIR/ansible.cfg" \
   ansible-playbook -vvv \
+    -i "$INVENTORY_FILE" \
     --extra-vars "@${EXTRA_VARS_FILE}" \
     ansible/site.yml
 )
