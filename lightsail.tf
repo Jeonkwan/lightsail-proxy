@@ -44,7 +44,7 @@ resource "aws_lightsail_key_pair" "ssh" {
 }
 
 resource "aws_lightsail_instance" "lightsail_instance" {
-  depends_on = local.proxy_solution_requires_ddns ? [null_resource.namecheap_dns_update[0]] : []
+  depends_on = [null_resource.namecheap_dns_update]
 
   # introducing timestamp to create unique instance names, this can keep IP address when apply again but rotate the whole machine, then SSL certificates will be renewed at new instance startup
   name              = "${local.instance_name}-${formatdate("YYYYMMDDhhmmss", timestamp())}"
