@@ -95,6 +95,11 @@ if [[ -n "$SUBDOMAIN" ]]; then
 fi
 
 BASE_DIR="/opt/lightsail-proxy/${SOLUTION}"
+PROJECT_ROOT="/opt/xray"
+COMPOSE_PROJECT_DIRECTORY="${PROJECT_ROOT}/compose"
+XRAY_CONFIG_DIR="${PROJECT_ROOT}/xray"
+XRAY_CONFIG_FILE="config.json"
+XRAY_COMPOSE_FILE="${COMPOSE_PROJECT_DIRECTORY}/docker-compose.yml"
 REPO_DIR="${BASE_DIR}/repo"
 mkdir -p "$BASE_DIR"
 
@@ -122,16 +127,26 @@ trap cleanup EXIT
 export EXTRA_FQDN="$FQDN"
 export EXTRA_EMAIL="$EMAIL"
 export EXTRA_UUID="$UUID"
+export EXTRA_COMPOSE_PROJECT_DIRECTORY="$COMPOSE_PROJECT_DIRECTORY"
+export EXTRA_XRAY_CONFIG_DIR="$XRAY_CONFIG_DIR"
+export EXTRA_XRAY_CONFIG_FILE="$XRAY_CONFIG_FILE"
+export EXTRA_XRAY_COMPOSE_FILE="$XRAY_COMPOSE_FILE"
 python3 - <<'PY' > "$EXTRA_VARS_FILE"
 import json, os, sys
 payload = {
     "xray_domain": os.environ["EXTRA_FQDN"],
     "xray_email": os.environ["EXTRA_EMAIL"],
     "xray_uuid": os.environ["EXTRA_UUID"],
+    "compose_project_directory": os.environ["EXTRA_COMPOSE_PROJECT_DIRECTORY"],
+    "xray_config_dir": os.environ["EXTRA_XRAY_CONFIG_DIR"],
+    "xray_config_file": os.environ["EXTRA_XRAY_CONFIG_FILE"],
+    "xray_compose_file": os.environ["EXTRA_XRAY_COMPOSE_FILE"],
 }
 json.dump(payload, sys.stdout)
 PY
-unset EXTRA_FQDN EXTRA_EMAIL EXTRA_UUID
+unset EXTRA_FQDN EXTRA_EMAIL EXTRA_UUID \
+  EXTRA_COMPOSE_PROJECT_DIRECTORY EXTRA_XRAY_CONFIG_DIR \
+  EXTRA_XRAY_CONFIG_FILE EXTRA_XRAY_COMPOSE_FILE
 
 log "Running Ansible playbook for ${SOLUTION}"
 (
