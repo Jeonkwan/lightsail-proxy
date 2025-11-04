@@ -4,7 +4,8 @@ The Terraform module currently relies on each Lightsail instance to request and 
 TLS material during first boot via the solution-specific Ansible playbook. This keeps issuance
 simple because the host can satisfy HTTP challenges once the reverse proxy stack is online. If
 you need to generate certificates on the machine that runs Terraform and then push them to the
-instance at launch time, the following approaches are available.
+instance at launch time, the following approaches work without requiring the deployment host to
+pre-assign a public IP to another machine during validation.
 
 ## 1. Use the Namecheap DNS API with an ACME DNS-01 flow (Recommended)
 
@@ -46,25 +47,6 @@ instance at launch time, the following approaches are available.
 - Terraform provisioners run on every instance replacement—because the module forces a new Lightsail instance on each apply for blue/green refreshes, you will exhaust Let’s Encrypt duplicate-certificate limits quickly unless you store and reuse the issued certificate across runs.
 - Terraform state will contain sensitive private key material unless you externalize it; the backend must be encrypted and access-controlled.
 - Provisioner failures are hard to recover from in Terraform because they leave partially created resources that require `terraform taint` or manual cleanup.
-
-## 3. Stand up a temporary validation endpoint before deployment (Generally impractical)
-
-**How it works**
-
-1. Assign the Lightsail static IP to an existing staging host or a local reverse proxy that you control.
-2. Run an ACME client with the HTTP-01 challenge against that temporary endpoint, serving the `/.well-known/acme-challenge` responses.
-3. After issuance, release the static IP back to Terraform and let it attach to the new Lightsail instance, then push the certificate bundle during provisioning.
-
-**Why it rarely works well**
-
-- HTTP-01 requires the challenge responder to be publicly reachable at the final domain, which is difficult before the new VM exists.
-- Reassigning the static IP to a staging host introduces downtime for existing clients and complicates automation.
-- The choreography is fragile—any timing slip or failed IP reassignment causes the challenge to fail.
-
-**Trade-offs / caveats**
-
-- Namecheap's Dynamic DNS updates may lag, so the HTTP-01 challenge can still point to the wrong host during validation.
-- Maintaining a staging host purely for certificate issuance defeats the simplicity of the current one-command deployment.
 
 ## Operational considerations common to all approaches
 
