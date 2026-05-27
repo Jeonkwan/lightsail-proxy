@@ -17,6 +17,22 @@ LESS_VISION_REALITY_PRIVATE_KEY="${less_vision_reality_private_key}"
 LESS_VISION_REALITY_PUBLIC_KEY="${less_vision_reality_public_key}"
 LESS_VISION_REALITY_DECOY_DOMAIN="${less_vision_reality_decoy_domain}"
 
+# Configure 2GB of swap space to prevent Out-Of-Memory (OOM) errors on small memory VMs
+if [ ! -f /swapfile ]; then
+    fallocate -l 2G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+# Configure daily reboot at 5:00 AM China Time (21:00 UTC)
+cat <<'EOF' > /etc/cron.d/daily-reboot
+0 21 * * * root /sbin/shutdown -r now
+EOF
+chmod 644 /etc/cron.d/daily-reboot
+chown root:root /etc/cron.d/daily-reboot
+
 wait_for_apt() {
     # Lightsail images often run unattended upgrades on first boot; wait until locks clear.
     while fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
