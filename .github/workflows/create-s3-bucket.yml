@@ -1,0 +1,75 @@
+name: AWS Create S3 Bucket
+
+on:
+  workflow_dispatch:
+    inputs:
+      bucket_name:
+        description: "Name of the S3 bucket to create (must be globally unique)"
+        required: true
+        type: string
+      region:
+        description: "AWS Region for the S3 Bucket"
+        required: true
+        default: "ap-southeast-1"
+        type: choice
+        options:
+          - ap-southeast-1  # Singapore
+          - ap-northeast-1  # Tokyo
+          - ap-northeast-2  # Seoul
+          - ap-south-1      # Mumbai
+          - ap-east-1       # Hong Kong
+          - ap-southeast-3  # Jakarta
+
+jobs:
+  create-bucket:
+    name: "Create S3 Bucket [${{ github.event.inputs.bucket_name }}] in [${{ github.event.inputs.region }}]"
+    runs-on: ubuntu-latest
+    environment: prod-basic
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ github.event.inputs.region }}
+
+    steps:
+      - name: Validate Bucket Name
+        run: |
+          BUCKET_NAME="${{ github.event.inputs.bucket_name }}"
+          if [[ -z "$BUCKET_NAME" ]]; then
+            echo "Error: bucket_name cannot be empty."
+            exit 1
+          fi
+
+      - name: Check and Create S3 Bucket
+        run: |
+          BUCKET_NAME="${{ github.event.inputs.bucket_name }}"
+          REGION="${{ github.event.inputs.region }}"
+          
+          echo "Checking if S3 bucket '$BUCKET_NAME' exists..."
+          if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "Bucket '$BUCKET_NAME' does not exist. Creating it in region '$REGION'..."
+            
+            if [[ "$REGION" == "us-east-1" ]]; then
+              aws s3api create-bucket \
+                --bucket "$BUCKET_NAME" \
+                --region "$REGION"
+            else
+              aws s3api create-bucket \
+                --bucket "$BUCKET_NAME" \
+                --region "$REGION" \
+                --create-bucket-configuration LocationConstraint="$REGION"
+            fi
+            
+            echo "Enabling versioning on bucket '$BUCKET_NAME'..."
+            aws s3api put-bucket-versioning \
+              --bucket "$BUCKET_NAME" \
+              --versioning-configuration Status=Enabled
+              
+            echo "Enabling server-side encryption on bucket '$BUCKET_NAME'..."
+            aws s3api put-bucket-encryption \
+              --bucket "$BUCKET_NAME" \
+              --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+              
+            echo "Successfully created S3 bucket '$BUCKET_NAME' in '$REGION'."
+          else
+            echo "S3 bucket '$BUCKET_NAME' already exists."
+          fi
