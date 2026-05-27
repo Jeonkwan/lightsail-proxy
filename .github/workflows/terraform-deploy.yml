@@ -24,18 +24,6 @@ on:
           - apply
           - destroy
           - test-full-cycle
-      backend_country:
-        description: "Country for S3 Bucket Placement (if it needs to be created)"
-        required: true
-        default: "Singapore"
-        type: choice
-        options:
-          - Singapore
-          - Japan
-          - Korea
-          - India
-          - Hong Kong
-          - Indonesia
       namecheap_ddns_password:
         description: "Override Namecheap DDNS password (optional)"
         required: false
@@ -66,10 +54,6 @@ on:
           - d
       domain_name:
         description: "Override domain name (optional)"
-        required: false
-        type: string
-      subdomain_name:
-        description: "Override subdomain name (optional)"
         required: false
         type: string
       proxy_solution:
@@ -115,7 +99,6 @@ jobs:
       TF_VAR_selected_country: ${{ github.event.inputs.selected_country != '' && github.event.inputs.selected_country || '' }}
       TF_VAR_selected_zone: ${{ github.event.inputs.selected_zone != '' && github.event.inputs.selected_zone || '' }}
       TF_VAR_domain_name: ${{ github.event.inputs.domain_name != '' && github.event.inputs.domain_name || vars.TF_VAR_domain_name || '' }}
-      TF_VAR_subdomain_name: ${{ github.event.inputs.subdomain_name != '' && github.event.inputs.subdomain_name || '' }}
       TF_VAR_proxy_solution: ${{ github.event.inputs.proxy_solution != '' && github.event.inputs.proxy_solution || '' }}
       TF_VAR_proxy_contact_email: ${{ github.event.inputs.proxy_contact_email != '' && github.event.inputs.proxy_contact_email || '' }}
       TF_VAR_playbook_branch: ${{ github.event.inputs.playbook_branch != '' && github.event.inputs.playbook_branch || vars.TF_VAR_playbook_branch || 'main' }}
@@ -128,23 +111,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
-      - name: Resolve AWS Region from Country
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          COUNTRY="${{ github.event.inputs.backend_country || 'Singapore' }}"
-          case "$COUNTRY" in
-            "Singapore") REGION="ap-southeast-1" ;;
-            "Japan") REGION="ap-northeast-1" ;;
-            "Korea") REGION="ap-northeast-2" ;;
-            "India") REGION="ap-south-1" ;;
-            "Hong Kong") REGION="ap-east-1" ;;
-            "Indonesia") REGION="ap-southeast-3" ;;
-            *) REGION="ap-southeast-1" ;;
-          esac
-          echo "AWS_DEFAULT_REGION=$REGION" >> "$GITHUB_ENV"
-          echo "TF_BACKEND_REGION=$REGION" >> "$GITHUB_ENV"
-          echo "Resolved $COUNTRY to region $REGION"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
