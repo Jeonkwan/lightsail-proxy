@@ -7,28 +7,27 @@ on:
         description: "Name of the S3 bucket to create (must be globally unique)"
         required: true
         type: string
-      region:
-        description: "AWS Region for the S3 Bucket"
+      country:
+        description: "Country for S3 Bucket Placement"
         required: true
-        default: "ap-southeast-1"
+        default: "Singapore"
         type: choice
         options:
-          - ap-southeast-1  # Singapore
-          - ap-northeast-1  # Tokyo
-          - ap-northeast-2  # Seoul
-          - ap-south-1      # Mumbai
-          - ap-east-1       # Hong Kong
-          - ap-southeast-3  # Jakarta
+          - Singapore
+          - Japan
+          - Korea
+          - India
+          - Hong Kong
+          - Indonesia
 
 jobs:
   create-bucket:
-    name: "Create S3 Bucket [${{ github.event.inputs.bucket_name }}] in [${{ github.event.inputs.region }}]"
+    name: "Create S3 Bucket [${{ github.event.inputs.bucket_name }}] in [${{ github.event.inputs.country }}]"
     runs-on: ubuntu-latest
     environment: prod-basic
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: ${{ github.event.inputs.region }}
 
     steps:
       - name: Validate Bucket Name
@@ -39,10 +38,25 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve AWS Region from Country
+        run: |
+          COUNTRY="${{ github.event.inputs.country || 'Singapore' }}"
+          case "$COUNTRY" in
+            "Singapore") REGION="ap-southeast-1" ;;
+            "Japan") REGION="ap-northeast-1" ;;
+            "Korea") REGION="ap-northeast-2" ;;
+            "India") REGION="ap-south-1" ;;
+            "Hong Kong") REGION="ap-east-1" ;;
+            "Indonesia") REGION="ap-southeast-3" ;;
+            *) REGION="ap-southeast-1" ;;
+          esac
+          echo "AWS_DEFAULT_REGION=$REGION" >> "$GITHUB_ENV"
+          echo "Resolved $COUNTRY to region $REGION"
+
       - name: Check and Create S3 Bucket
         run: |
           BUCKET_NAME="${{ github.event.inputs.bucket_name }}"
-          REGION="${{ github.event.inputs.region }}"
+          REGION="$AWS_DEFAULT_REGION"
           
           echo "Checking if S3 bucket '$BUCKET_NAME' exists..."
           if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then

@@ -24,18 +24,18 @@ on:
           - apply
           - destroy
           - test-full-cycle
-      backend_region:
-        description: "AWS Region for S3 Bucket (if it needs to be created)"
+      backend_country:
+        description: "Country for S3 Bucket Placement (if it needs to be created)"
         required: true
-        default: "ap-southeast-1"
+        default: "Singapore"
         type: choice
         options:
-          - ap-southeast-1  # Singapore
-          - ap-northeast-1  # Tokyo
-          - ap-northeast-2  # Seoul
-          - ap-south-1      # Mumbai
-          - ap-east-1       # Hong Kong
-          - ap-southeast-3  # Jakarta
+          - Singapore
+          - Japan
+          - Korea
+          - India
+          - Hong Kong
+          - Indonesia
       namecheap_ddns_password:
         description: "Override Namecheap DDNS password (optional)"
         required: false
@@ -104,7 +104,7 @@ jobs:
       # AWS credentials from GitHub Secrets
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.backend_region || vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
+      AWS_DEFAULT_REGION: ${{ vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
       
       # SSH Public Key from GitHub Secrets
       SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
@@ -123,11 +123,28 @@ jobs:
       # Backend configuration overrides from variables/secrets
       TF_BACKEND_BUCKET: ${{ vars.TF_BACKEND_BUCKET }}
       TF_BACKEND_KEY: ${{ vars.TF_BACKEND_KEY }}
-      TF_BACKEND_REGION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.backend_region || vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
+      TF_BACKEND_REGION: ${{ vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Resolve AWS Region from Country
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          COUNTRY="${{ github.event.inputs.backend_country || 'Singapore' }}"
+          case "$COUNTRY" in
+            "Singapore") REGION="ap-southeast-1" ;;
+            "Japan") REGION="ap-northeast-1" ;;
+            "Korea") REGION="ap-northeast-2" ;;
+            "India") REGION="ap-south-1" ;;
+            "Hong Kong") REGION="ap-east-1" ;;
+            "Indonesia") REGION="ap-southeast-3" ;;
+            *) REGION="ap-southeast-1" ;;
+          esac
+          echo "AWS_DEFAULT_REGION=$REGION" >> "$GITHUB_ENV"
+          echo "TF_BACKEND_REGION=$REGION" >> "$GITHUB_ENV"
+          echo "Resolved $COUNTRY to region $REGION"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
