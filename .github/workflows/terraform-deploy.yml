@@ -1,0 +1,164 @@
+name: terraform-deploy
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "*.tf"
+      - "scripts/deploy-basic/**"
+      - ".github/workflows/terraform-deploy.yml"
+  workflow_dispatch:
+    inputs:
+      workspace:
+        description: "Terraform workspace to target (e.g. testing, expresso, jp-c)"
+        required: true
+        default: "testing"
+        type: string
+      tf_action:
+        description: "Terraform action"
+        required: true
+        default: "plan"
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+          - test-full-cycle
+      backend_region:
+        description: "AWS Region for S3 Bucket (if it needs to be created)"
+        required: true
+        default: "ap-southeast-1"
+        type: choice
+        options:
+          - ap-southeast-1  # Singapore
+          - ap-northeast-1  # Tokyo
+          - ap-northeast-2  # Seoul
+          - ap-south-1      # Mumbai
+          - ap-east-1       # Hong Kong
+          - ap-southeast-3  # Jakarta
+      namecheap_ddns_password:
+        description: "Override Namecheap DDNS password (optional)"
+        required: false
+        type: string
+      proxy_server_uuid:
+        description: "Override Proxy Server UUID (optional)"
+        required: false
+        type: string
+      selected_country:
+        description: "Override country (optional)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - singapore
+          - japan
+          - korea
+          - india
+      selected_zone:
+        description: "Override zone (optional)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - a
+          - b
+          - c
+          - d
+      domain_name:
+        description: "Override domain name (optional)"
+        required: false
+        type: string
+      subdomain_name:
+        description: "Override subdomain name (optional)"
+        required: false
+        type: string
+      proxy_solution:
+        description: "Override proxy solution (optional)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - trojan-go
+          - less-vision
+          - less-vision-reality
+      proxy_contact_email:
+        description: "Override proxy contact email (optional, required for less-vision)"
+        required: false
+        type: string
+      playbook_branch:
+        description: "Override Ansible playbook branch (optional, defaults to 'main')"
+        required: false
+        default: "main"
+        type: string
+
+jobs:
+  deploy:
+    name: "[${{ github.event.inputs.workspace || 'testing' }}] - ${{ github.event.inputs.tf_action || 'test-full-cycle' }}"
+    runs-on: ubuntu-latest
+    environment: prod-basic
+    env:
+      TF_WORKSPACE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace || 'testing' }}
+      TF_ACTION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tf_action || 'test-full-cycle' }}
+      TF_PLAN_DIR: artifacts/terraform
+      
+      # AWS credentials from GitHub Secrets
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.backend_region || vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
+      
+      # SSH Public Key from GitHub Secrets
+      SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+      
+      # Optional overrides from inputs/secrets
+      TF_VAR_namecheap_ddns_password: ${{ github.event.inputs.namecheap_ddns_password != '' && github.event.inputs.namecheap_ddns_password || secrets.NAMECHEAP_DDNS_PASS }}
+      TF_VAR_proxy_server_uuid: ${{ github.event.inputs.proxy_server_uuid != '' && github.event.inputs.proxy_server_uuid || secrets.PROXY_SERVER_UUID }}
+      TF_VAR_selected_country: ${{ github.event.inputs.selected_country != '' && github.event.inputs.selected_country || '' }}
+      TF_VAR_selected_zone: ${{ github.event.inputs.selected_zone != '' && github.event.inputs.selected_zone || '' }}
+      TF_VAR_domain_name: ${{ github.event.inputs.domain_name != '' && github.event.inputs.domain_name || vars.TF_VAR_domain_name || '' }}
+      TF_VAR_subdomain_name: ${{ github.event.inputs.subdomain_name != '' && github.event.inputs.subdomain_name || '' }}
+      TF_VAR_proxy_solution: ${{ github.event.inputs.proxy_solution != '' && github.event.inputs.proxy_solution || '' }}
+      TF_VAR_proxy_contact_email: ${{ github.event.inputs.proxy_contact_email != '' && github.event.inputs.proxy_contact_email || '' }}
+      TF_VAR_playbook_branch: ${{ github.event.inputs.playbook_branch != '' && github.event.inputs.playbook_branch || vars.TF_VAR_playbook_branch || 'main' }}
+      
+      # Backend configuration overrides from variables/secrets
+      TF_BACKEND_BUCKET: ${{ vars.TF_BACKEND_BUCKET }}
+      TF_BACKEND_KEY: ${{ vars.TF_BACKEND_KEY }}
+      TF_BACKEND_REGION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.backend_region || vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Bootstrap credentials and backend
+        run: |
+          chmod +x scripts/deploy-basic/*.sh
+          scripts/deploy-basic/bootstrap-env.sh
+
+      - name: Terraform plan
+        run: scripts/deploy-basic/terraform-plan.sh
+
+      - name: Terraform apply or destroy
+        if: env.TF_ACTION != 'plan'
+        run: scripts/deploy-basic/terraform-apply.sh
+
+      - name: Publish summary
+        if: always()
+        run: |
+          if [ -f artifacts/terraform/summary.md ]; then
+            cat artifacts/terraform/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No summary generated" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-logs
+          path: artifacts/terraform/
+          if-no-files-found: warn

@@ -4,6 +4,17 @@ terraform {
       source  = "hashicorp/null"
       version = ">= 3.0.0"
     }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+
+  backend "s3" {
+    bucket  = "my-lightsail-proxy-terraform-state"
+    key     = "lightsail-proxy/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
   }
 }
 
