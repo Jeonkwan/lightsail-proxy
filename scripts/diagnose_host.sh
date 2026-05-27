@@ -103,9 +103,16 @@ $SSH_CMD "ps aux --sort=-%mem | head -n 6"
 
 echo -e "\n${BOLD}${CYAN}[4/5] Docker & Container Status${NC}"
 if $SSH_CMD "command -v docker >/dev/null 2>&1"; then
-    $SSH_CMD "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
-    echo ""
-    $SSH_CMD "docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}'"
+    # Run docker ps with sudo fallback if needed
+    if ! $SSH_CMD "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'" 2>/dev/null; then
+        echo -e "${YELLOW}Retrying Docker commands with sudo...${NC}"
+        $SSH_CMD "sudo docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'" || echo -e "${RED}Error: Failed to retrieve Docker containers (even with sudo).${NC}"
+        echo ""
+        $SSH_CMD "sudo docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}'" || true
+    else
+        echo ""
+        $SSH_CMD "docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}'" || true
+    fi
 else
     echo -e "${YELLOW}Docker is not installed on the remote host.${NC}"
 fi
