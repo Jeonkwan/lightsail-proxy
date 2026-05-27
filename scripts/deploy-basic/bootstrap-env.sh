@@ -17,15 +17,19 @@ python3 - <<'PY'
 import os
 import re
 import subprocess
+import json
+import uuid
 
 workspace = os.environ.get("TF_WORKSPACE", "default")
 tfvars_file = f"{workspace}.tfvars"
-if not os.path.exists(tfvars_file):
+tfvars_exists = os.path.exists(tfvars_file)
+
+if not tfvars_exists:
     print(f"Workspace config file '{tfvars_file}' not found. Relying entirely on environment variables.")
 
-print(f"Reading configuration from {tfvars_file}...")
 content = ""
-if os.path.exists(tfvars_file):
+if tfvars_exists:
+    print(f"Reading configuration from {tfvars_file}...")
     with open(tfvars_file, "r", encoding="utf-8") as f:
         content = f.read()
 
@@ -34,9 +38,42 @@ def get_var(name, default):
     match = re.search(rf'^\s*{name}\s*=\s*"([^"]+)"', content, re.MULTILINE)
     return match.group(1) if match else default
 
-aws_cred_path = get_var("aws_cred_file_path", "~/.aws/credentials")
-aws_conf_path = get_var("aws_conf_file_path", "~/.aws/config")
-ssh_pub_path = get_var("ssh_public_key_path", "~/.ssh/jeonkwan-mbp.pub")
+def set_github_env(name, val):
+    github_env = os.environ.get("GITHUB_ENV")
+    if github_env:
+        # Use heredoc to handle multiline values and special characters safely
+        delimiter = f"EOF_{uuid.uuid4().hex}"
+        with open(github_env, "a", encoding="utf-8") as f:
+            f.write(f"{name}<<{delimiter}\n{val}\n{delimiter}\n")
+        print(f"Exported to GITHUB_ENV: {name}")
+
+# Dynamic lookup of workspace-prefixed environment/repository variables
+vars_context_str = os.environ.get("VARS_CONTEXT", "{}")
+try:
+    vars_dict = json.loads(vars_context_str)
+except Exception as e:
+    print(f"Error parsing VARS_CONTEXT: {e}")
+    vars_dict = {}
+
+all_vars = {**vars_dict}
+for k, v in os.environ.items():
+    all_vars[k] = v
+
+workspace_prefix = workspace.upper().replace("-", "_").replace(".", "_") + "_"
+print(f"Checking for workspace-specific variables with prefix '{workspace_prefix}'...")
+
+for key, value in all_vars.items():
+    if key.upper().startswith(workspace_prefix):
+        var_suffix = key[len(workspace_prefix):].lower()
+        tf_var_name = f"TF_VAR_{var_suffix}"
+        print(f"Found workspace variable: {key} -> setting {tf_var_name}")
+        os.environ[tf_var_name] = value
+        set_github_env(tf_var_name, value)
+
+# Check and prioritize path variables from environment (TF_VAR_...) or HCL parsing
+aws_cred_path = os.environ.get("TF_VAR_aws_cred_file_path", get_var("aws_cred_file_path", "~/.aws/credentials"))
+aws_conf_path = os.environ.get("TF_VAR_aws_conf_file_path", get_var("aws_conf_file_path", "~/.aws/config"))
+ssh_pub_path = os.environ.get("TF_VAR_ssh_public_key_path", get_var("ssh_public_key_path", "~/.ssh/jeonkwan-mbp.pub"))
 
 def expand_path(p):
     return os.path.expanduser(p)

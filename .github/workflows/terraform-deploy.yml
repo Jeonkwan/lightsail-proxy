@@ -135,6 +135,8 @@ jobs:
           terraform_version: 1.6.6
 
       - name: Bootstrap credentials and backend
+        env:
+          VARS_CONTEXT: ${{ toJSON(vars) }}
         run: |
           chmod +x scripts/deploy-basic/*.sh
           scripts/deploy-basic/bootstrap-env.sh

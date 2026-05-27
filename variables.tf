@@ -4,11 +4,13 @@ variable "aws_profile" {
 }
 
 variable "aws_conf_file_path" {
-  type = string
+  type    = string
+  default = "~/.aws/config"
 }
 
 variable "aws_cred_file_path" {
-  type = string
+  type    = string
+  default = "~/.aws/credentials"
 }
 
 variable "regions" {
@@ -22,7 +24,8 @@ variable "regions" {
 }
 
 variable "selected_country" {
-  type = string
+  type    = string
+  default = "singapore"
 }
 
 variable "zones" {
@@ -36,7 +39,8 @@ variable "zones" {
 }
 
 variable "selected_zone" {
-  type = string
+  type    = string
+  default = "a"
 }
 
 variable "instance_name_prefix" {
@@ -44,7 +48,8 @@ variable "instance_name_prefix" {
 }
 
 variable "instance_customizable_name" {
-  type = string
+  type    = string
+  default = "machine"
 }
 
 variable "machine_config" {
@@ -59,31 +64,37 @@ variable "machine_config" {
 variable "ssh_public_key_path" {
   type        = string
   description = "your ssh public key for importing to lightsail"
+  default     = "~/.ssh/my_ssh_key.pub"
 }
 
 variable "ssh_private_key_path" {
   type        = string
   description = "your ssh private key for connecting to lightsail vm after deployment"
+  default     = "~/.ssh/my_ssh_key_private"
 }
 
 variable "domain_name" {
-  type = string
+  type    = string
+  default = "example.com"
 }
 
 variable "subdomain_name" {
-  type = string
+  type    = string
+  default = "subdomain-name"
 }
 
 variable "namecheap_ddns_password" {
-  type      = string
+  type        = string
   description = "Namecheap Dynamic DNS password (ignored when proxy_solution = \"less-vision-reality\")."
-  sensitive = true
+  sensitive   = true
+  default     = "youShouldPassItOnTheFly"
 }
 
 variable "proxy_server_uuid" {
   type        = string
   sensitive   = true
   description = "UUID shared by proxy solutions (Trojan-Go treats it as the password)."
+  default     = "00000000-0000-4000-8000-000000000000"
 
   validation {
     condition     = can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", trimspace(var.proxy_server_uuid)))
