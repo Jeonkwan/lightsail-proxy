@@ -152,6 +152,16 @@ Example session:
 
 - Every pull request runs the **Terraform Validate** GitHub Actions workflow, which performs `terraform init -backend=false` followed by `terraform validate` using Terraform 1.6.6.
 - To match CI locally, run the same commands from the repository root and consider exporting `TF_PLUGIN_CACHE_DIR` so Terraform can reuse provider downloads between runs.
+- For a guide on setting up the automated deployment pipeline with S3 backend native locking, see the [CI/CD Workflow Guide](file:///Users/jeonkwan/github/myProxyProject/lightsail-proxy/docs/github-actions-deployment.md).
+
+## Resilience & Resource Optimization 🛡️
+
+By default, this repository deploys AWS Lightsail `nano` instances, which are resource-constrained (512MB RAM). To prevent system freezes and Out-of-Memory (OOM) failures during intensive operations (like automatic package upgrades or multiple Docker services):
+
+- **2GB Swap Space**: The setup automatically configures a 2GB persistent swap file on the SSD root partition.
+- **Daily Reboot Cron Job**: The VM is automatically scheduled to reboot daily at 5:00 AM China Time (21:00 UTC) to release any leaked memory and stale connections.
+
+For more details on the boot stages and how these protection mechanisms work, see the [Architecture and Resilience Guide](file:///Users/jeonkwan/github/myProxyProject/lightsail-proxy/docs/architecture-and-resilience.md).
 
 ## Troubleshooting 🧯
 
