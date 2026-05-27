@@ -104,12 +104,12 @@ variable "proxy_server_uuid" {
 
 variable "proxy_solution" {
   type        = string
-  description = "Proxy solution to deploy. Supported values: trojan-go, less-vision, less-vision-reality."
+  description = "Proxy solution to deploy. Supported values: trojan-go, less-vision, less-vision-reality, basic-vm."
   default     = "trojan-go"
 
   validation {
-    condition     = contains(["trojan-go", "less-vision", "less-vision-reality"], var.proxy_solution)
-    error_message = "proxy_solution must be one of \"trojan-go\", \"less-vision\", or \"less-vision-reality\"."
+    condition     = contains(["trojan-go", "less-vision", "less-vision-reality", "basic-vm"], var.proxy_solution)
+    error_message = "proxy_solution must be one of \"trojan-go\", \"less-vision\", \"less-vision-reality\", or \"basic-vm\"."
   }
 }
 

@@ -65,6 +65,7 @@ on:
           - trojan-go
           - less-vision
           - less-vision-reality
+          - basic-vm
       proxy_contact_email:
         description: "Override proxy contact email (optional, required for less-vision)"
         required: false

@@ -132,6 +132,9 @@ case "$PROXY_SOLUTION" in
             --xray-sni "$LESS_VISION_REALITY_DECOY_DOMAIN" \
             --docker-user "$USERNAME"
         ;;
+    basic-vm)
+        echo "Basic VM mode active. Packages installed, skipping proxy deployment."
+        ;;
     *)
         echo "Unsupported proxy_solution: $${PROXY_SOLUTION}" >&2
         exit 1
