@@ -53,6 +53,9 @@ fi
 if [[ -n "${TF_VAR_less_vision_reality_public_key:-}" ]]; then
   VAR_ARGS+=("-var=less_vision_reality_public_key=${TF_VAR_less_vision_reality_public_key}")
 fi
+if [[ -n "${TF_VAR_less_vision_reality_short_ids:-}" ]]; then
+  VAR_ARGS+=("-var=less_vision_reality_short_ids=${TF_VAR_less_vision_reality_short_ids}")
+fi
 if [[ -n "${TF_VAR_selected_country:-}" ]]; then
   VAR_ARGS+=("-var=selected_country=${TF_VAR_selected_country}")
 fi
@@ -83,7 +86,12 @@ if [[ "${TF_ACTION}" == "destroy" ]]; then
   PLAN_FLAGS+=("-destroy")
 fi
 
-terraform plan -var-file="${WORKSPACE_NAME}.tfvars" "${VAR_ARGS[@]}" "${PLAN_FLAGS[@]}"
+VAR_FILE_ARGS=()
+if [[ -f "${WORKSPACE_NAME}.tfvars" ]]; then
+  VAR_FILE_ARGS+=("-var-file=${WORKSPACE_NAME}.tfvars")
+fi
+
+terraform plan "${VAR_FILE_ARGS[@]}" "${VAR_ARGS[@]}" "${PLAN_FLAGS[@]}"
 
 terraform show -json "${TF_PLAN_FILE}" > "${TF_PLAN_JSON}"
 

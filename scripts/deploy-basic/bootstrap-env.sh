@@ -21,20 +21,7 @@ import subprocess
 workspace = os.environ.get("TF_WORKSPACE", "default")
 tfvars_file = f"{workspace}.tfvars"
 if not os.path.exists(tfvars_file):
-    print(f"Workspace config file '{tfvars_file}' not found. Generating on the fly from defaults.tfvars...")
-    import shutil
-    shutil.copy("defaults.tfvars", tfvars_file)
-    
-    # Customise the file contents
-    with open(tfvars_file, "r", encoding="utf-8") as f:
-        tf_contents = f.read()
-    
-    tf_contents = re.sub(r'instance_customizable_name\s*=\s*"machine"', f'instance_customizable_name = "{workspace}"', tf_contents)
-    tf_contents = re.sub(r'subdomain_name\s*=\s*"subdomain-name"', f'subdomain_name = "{workspace}"', tf_contents)
-    
-    with open(tfvars_file, "w", encoding="utf-8") as f:
-        f.write(tf_contents)
-    print(f"Customised '{tfvars_file}' with instance name and subdomain set to '{workspace}'")
+    print(f"Workspace config file '{tfvars_file}' not found. Relying entirely on environment variables.")
 
 print(f"Reading configuration from {tfvars_file}...")
 content = ""

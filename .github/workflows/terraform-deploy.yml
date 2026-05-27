@@ -93,16 +93,33 @@ jobs:
       # SSH Public Key from GitHub Secrets
       SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
       
-      # Optional overrides from inputs/secrets
-      TF_VAR_namecheap_ddns_password: ${{ github.event.inputs.namecheap_ddns_password != '' && github.event.inputs.namecheap_ddns_password || secrets.NAMECHEAP_DDNS_PASS }}
-      TF_VAR_proxy_server_uuid: ${{ github.event.inputs.proxy_server_uuid != '' && github.event.inputs.proxy_server_uuid || secrets.PROXY_SERVER_UUID }}
-      TF_VAR_selected_country: ${{ github.event.inputs.selected_country != '' && github.event.inputs.selected_country || '' }}
-      TF_VAR_selected_zone: ${{ github.event.inputs.selected_zone != '' && github.event.inputs.selected_zone || '' }}
-      TF_VAR_domain_name: ${{ github.event.inputs.domain_name != '' && github.event.inputs.domain_name || vars.TF_VAR_domain_name || '' }}
-      TF_VAR_proxy_solution: ${{ github.event.inputs.proxy_solution != '' && github.event.inputs.proxy_solution || '' }}
-      TF_VAR_proxy_contact_email: ${{ github.event.inputs.proxy_contact_email != '' && github.event.inputs.proxy_contact_email || '' }}
-      TF_VAR_playbook_branch: ${{ github.event.inputs.playbook_branch != '' && github.event.inputs.playbook_branch || vars.TF_VAR_playbook_branch || 'main' }}
+      # Base environment path variables
+      TF_VAR_aws_profile: "default"
+      TF_VAR_aws_conf_file_path: "~/.aws/config"
+      TF_VAR_aws_cred_file_path: "~/.aws/credentials"
+      TF_VAR_ssh_public_key_path: "~/.ssh/jeonkwan-mbp.pub"
+      TF_VAR_ssh_private_key_path: "~/.ssh/jeonkwan-mbp"
       
+      # Workspace and instance name mapping
+      TF_VAR_instance_customizable_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace || 'testing' }}
+      TF_VAR_subdomain_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace || 'testing' }}
+      
+      # Environment configurations (Inputs override -> repo variables -> defaults)
+      TF_VAR_selected_country: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.selected_country != '' && github.event.inputs.selected_country || vars.TF_VAR_selected_country || 'singapore' }}
+      TF_VAR_selected_zone: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.selected_zone != '' && github.event.inputs.selected_zone || vars.TF_VAR_selected_zone || 'a' }}
+      TF_VAR_domain_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.domain_name != '' && github.event.inputs.domain_name || vars.TF_VAR_domain_name || 'example.com' }}
+      TF_VAR_proxy_solution: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.proxy_solution != '' && github.event.inputs.proxy_solution || vars.TF_VAR_proxy_solution || 'trojan-go' }}
+      TF_VAR_proxy_contact_email: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.proxy_contact_email != '' && github.event.inputs.proxy_contact_email || vars.TF_VAR_proxy_contact_email || '' }}
+      TF_VAR_playbook_branch: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.playbook_branch != '' && github.event.inputs.playbook_branch || vars.TF_VAR_playbook_branch || 'main' }}
+      TF_VAR_namecheap_ddns_password: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.namecheap_ddns_password != '' && github.event.inputs.namecheap_ddns_password || secrets.NAMECHEAP_DDNS_PASS || 'youShouldPassItOnTheFly' }}
+      TF_VAR_proxy_server_uuid: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.proxy_server_uuid != '' && github.event.inputs.proxy_server_uuid || secrets.PROXY_SERVER_UUID || '00000000-0000-4000-8000-000000000000' }}
+      
+      # less-vision-reality specific secrets mapping (JSON list parsing for short IDs)
+      TF_VAR_less_vision_reality_short_ids: ${{ secrets.LESS_VISION_REALITY_SHORT_IDS || '[]' }}
+      TF_VAR_less_vision_reality_private_key: ${{ secrets.LESS_VISION_REALITY_PRIVATE_KEY || '' }}
+      TF_VAR_less_vision_reality_public_key: ${{ secrets.LESS_VISION_REALITY_PUBLIC_KEY || '' }}
+      TF_VAR_less_vision_reality_decoy_domain: ${{ secrets.LESS_VISION_REALITY_DECOY_DOMAIN || 'web.wechat.com' }}
+
       # Backend configuration overrides from variables/secrets
       TF_BACKEND_BUCKET: ${{ vars.TF_BACKEND_BUCKET }}
       TF_BACKEND_KEY: ${{ vars.TF_BACKEND_KEY }}

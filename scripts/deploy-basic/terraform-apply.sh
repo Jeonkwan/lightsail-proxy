@@ -43,6 +43,9 @@ fi
 if [[ -n "${TF_VAR_less_vision_reality_public_key:-}" ]]; then
   VAR_ARGS+=("-var=less_vision_reality_public_key=${TF_VAR_less_vision_reality_public_key}")
 fi
+if [[ -n "${TF_VAR_less_vision_reality_short_ids:-}" ]]; then
+  VAR_ARGS+=("-var=less_vision_reality_short_ids=${TF_VAR_less_vision_reality_short_ids}")
+fi
 if [[ -n "${TF_VAR_selected_country:-}" ]]; then
   VAR_ARGS+=("-var=selected_country=${TF_VAR_selected_country}")
 fi
@@ -68,14 +71,19 @@ if [[ -n "${TF_VAR_playbook_branch:-}" ]]; then
   VAR_ARGS+=("-var=playbook_branch=${TF_VAR_playbook_branch}")
 fi
 
+VAR_FILE_ARGS=()
+if [[ -f "${WORKSPACE_NAME}.tfvars" ]]; then
+  VAR_FILE_ARGS+=("-var-file=${WORKSPACE_NAME}.tfvars")
+fi
+
 if [[ "${TF_ACTION}" == "destroy" ]]; then
-  terraform destroy -var-file="${WORKSPACE_NAME}.tfvars" "${VAR_ARGS[@]}" -auto-approve
+  terraform destroy "${VAR_FILE_ARGS[@]}" "${VAR_ARGS[@]}" -auto-approve
 elif [[ "${TF_ACTION}" == "test-full-cycle" ]]; then
   echo "Starting full cycle test: Apply..."
   terraform apply -input=false "${TF_PLAN_FILE}"
   
   echo "Full cycle test: Apply complete. Starting Destroy..."
-  terraform destroy -var-file="${WORKSPACE_NAME}.tfvars" "${VAR_ARGS[@]}" -auto-approve
+  terraform destroy "${VAR_FILE_ARGS[@]}" "${VAR_ARGS[@]}" -auto-approve
 else
   terraform apply -input=false "${TF_PLAN_FILE}"
 fi
