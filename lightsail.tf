@@ -1,6 +1,6 @@
 locals {
   instance_name                  = "${var.instance_name_prefix}-${var.selected_country}-${var.zones[var.selected_zone]}-${var.instance_customizable_name}"
-  proxy_solution_requires_ddns   = contains(["trojan-go", "less-vision"], var.proxy_solution)
+  proxy_solution_requires_ddns   = contains(["trojan-go", "less-vision"], var.proxy_solution) || (var.namecheap_ddns_password != "" && var.namecheap_ddns_password != "youShouldPassItOnTheFly")
 }
 
 resource "aws_lightsail_static_ip_attachment" "lightsail_instance_ip_attachment" {
