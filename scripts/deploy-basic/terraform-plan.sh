@@ -81,17 +81,103 @@ if [[ -n "${TF_VAR_playbook_branch:-}" ]]; then
   VAR_ARGS+=("-var=playbook_branch=${TF_VAR_playbook_branch}")
 fi
 
-PLAN_FLAGS=("-out=${TF_PLAN_FILE}" "-input=false")
-if [[ "${TF_ACTION}" == "destroy" ]]; then
-  PLAN_FLAGS+=("-destroy")
-fi
-
 VAR_FILE_ARGS=()
 if [[ -f "${WORKSPACE_NAME}.tfvars" ]]; then
   VAR_FILE_ARGS+=("-var-file=${WORKSPACE_NAME}.tfvars")
 fi
 
+# Auto-detect region mismatch and clean up resources in the old region first
+OLD_STATE_INFO=$(terraform state pull 2>/dev/null | python3 -c '
+import sys, json
+try:
+    state = json.load(sys.stdin)
+    country = None
+    zone_suffix = "a"
+    region = None
+    for res in state.get("resources", []):
+        if res.get("type") == "aws_lightsail_instance":
+            for inst in res.get("instances", []):
+                az = inst.get("attributes", {}).get("availability_zone")
+                if az:
+                    region = az[:-1]
+                    zone_suffix = az[-1]
+                    break
+            if region:
+                break
+    if not region:
+        for res in state.get("resources", []):
+            if res.get("type") in ["aws_lightsail_static_ip", "aws_lightsail_static_ip_attachment"]:
+                for inst in res.get("instances", []):
+                    reg = inst.get("attributes", {}).get("region")
+                    if reg:
+                        region = reg
+                        break
+                if region:
+                    break
+    if region:
+        if region == "ap-northeast-1": country = "japan"
+        elif region == "ap-northeast-2": country = "korea"
+        elif region == "ap-south-1": country = "india"
+        elif region == "ap-east-1": country = "hong kong"
+        elif region == "ap-southeast-3": country = "indonesia"
+        else: country = "singapore"
+        print(f"{country} {zone_suffix} {region}")
+        sys.exit(0)
+except Exception:
+    pass
+sys.exit(1)
+' || echo "")
+
+if [[ -n "${OLD_STATE_INFO}" ]]; then
+  read -r OLD_COUNTRY OLD_ZONE OLD_REGION <<< "${OLD_STATE_INFO}"
+  
+  TARGET_COUNTRY="${TF_VAR_selected_country:-singapore}"
+  case "${TARGET_COUNTRY}" in
+    singapore) TARGET_REGION="ap-southeast-1" ;;
+    japan)     TARGET_REGION="ap-northeast-1" ;;
+    korea)     TARGET_REGION="ap-northeast-2" ;;
+    india)     TARGET_REGION="ap-south-1" ;;
+    "hong kong") TARGET_REGION="ap-east-1" ;;
+    indonesia) TARGET_REGION="ap-southeast-3" ;;
+    *)         TARGET_REGION="ap-southeast-1" ;;
+  esac
+  
+  if [[ "${OLD_REGION}" != "${TARGET_REGION}" && "${TF_ACTION}" != "destroy" ]]; then
+    echo "=========================================================="
+    echo "WARNING: Workspace '${WORKSPACE_NAME}' is currently deployed in ${OLD_COUNTRY} (${OLD_REGION}), zone ${OLD_ZONE}."
+    echo "Target region is ${TARGET_COUNTRY} (${TARGET_REGION})."
+    echo "To change regions, we must destroy the existing resources in ${OLD_REGION} first."
+    echo "Automatically destroying existing resources in ${OLD_REGION}..."
+    echo "=========================================================="
+    
+    DESTROY_VAR_ARGS=("${VAR_ARGS[@]}")
+    DESTROY_VAR_ARGS+=("-var=selected_country=${OLD_COUNTRY}" "-var=selected_zone=${OLD_ZONE}")
+    
+    ORIGINAL_AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-}"
+    export AWS_DEFAULT_REGION="${OLD_REGION}"
+    
+    echo "Running terraform destroy in ${OLD_REGION}..."
+    terraform destroy "${VAR_FILE_ARGS[@]}" "${DESTROY_VAR_ARGS[@]}" -auto-approve
+    
+    if [[ -n "${ORIGINAL_AWS_DEFAULT_REGION}" ]]; then
+      export AWS_DEFAULT_REGION="${ORIGINAL_AWS_DEFAULT_REGION}"
+    else
+      unset AWS_DEFAULT_REGION
+    fi
+    
+    echo "=========================================================="
+    echo "Successfully destroyed old resources. Proceeding with new deployment in ${TARGET_REGION}."
+    echo "=========================================================="
+  fi
+fi
+
+PLAN_FLAGS=("-out=${TF_PLAN_FILE}" "-input=false")
+if [[ "${TF_ACTION}" == "destroy" ]]; then
+  PLAN_FLAGS+=("-destroy")
+fi
+
 terraform plan "${VAR_FILE_ARGS[@]}" "${VAR_ARGS[@]}" "${PLAN_FLAGS[@]}"
+
 
 terraform show -json "${TF_PLAN_FILE}" > "${TF_PLAN_JSON}"
 
