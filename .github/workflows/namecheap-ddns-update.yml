@@ -1,0 +1,80 @@
+---
+name: Namecheap DDNS Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "Host or subdomain to update (e.g. decaf, use @ for root)"
+        required: true
+        default: "decaf"
+        type: string
+      domain:
+        description: "Namecheap domain name (e.g. mokamaker.lol)"
+        required: true
+        default: "mokamaker.lol"
+        type: string
+      ip:
+        description: "IPv4 address to assign (IP of your VM)"
+        required: true
+        type: string
+      password:
+        description: "Override DDNS password (optional, falls back to NAMECHEAP_DDNS_PASS secret)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: "Update DDNS [${{ github.event.inputs.host }}.${{ github.event.inputs.domain }}] -> ${{ github.event.inputs.ip }}"
+    runs-on: ubuntu-latest
+    environment: prod-basic
+    steps:
+      - name: Prepare password
+        id: password
+        env:
+          INPUT_PASSWORD: ${{ github.event.inputs.password }}
+          SECRET_PASSWORD: ${{ secrets.NAMECHEAP_DDNS_PASS }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_PASSWORD" ]; then
+            echo "value=$INPUT_PASSWORD" >> "$GITHUB_OUTPUT"
+          elif [ -n "$SECRET_PASSWORD" ]; then
+            echo "value=$SECRET_PASSWORD" >> "$GITHUB_OUTPUT"
+          else
+            echo "Missing Namecheap DDNS password secret." >&2
+            exit 1
+          fi
+
+      - name: Update Namecheap DNS
+        env:
+          HOST: ${{ github.event.inputs.host }}
+          DOMAIN: ${{ github.event.inputs.domain }}
+          ADDRESS: ${{ github.event.inputs.ip }}
+          PASSWORD: ${{ steps.password.outputs.value }}
+        run: |
+          set -euo pipefail
+          if [ -z "$HOST" ]; then
+            HOST='@'
+          fi
+          if [ -z "$DOMAIN" ] || [ -z "$ADDRESS" ]; then
+            echo "Domain and IP address inputs are required." >&2
+            exit 1
+          fi
+          RESPONSE=$(curl -fsSL --get \
+            --data-urlencode "host=${HOST}" \
+            --data-urlencode "domain=${DOMAIN}" \
+            --data-urlencode "password=${PASSWORD}" \
+            --data-urlencode "ip=${ADDRESS}" \
+            "https://dynamicdns.park-your-domain.com/update")
+          
+          # Basic XML parse to check error count
+          if echo "$RESPONSE" | grep -q "<ErrCount>0</ErrCount>"; then
+            echo "Success: ${HOST}.${DOMAIN} updated to ${ADDRESS}"
+          else
+            echo "Error response from Namecheap:"
+            echo "$RESPONSE"
+            exit 1
+          fi
