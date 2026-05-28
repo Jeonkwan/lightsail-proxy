@@ -43,7 +43,7 @@ on:
           - korea
           - india
       selected_zone:
-        description: "Override zone (optional)"
+        description: "Override zone (optional). Compatibility: a & c (all), b (all except japan), d (only japan & korea)"
         required: false
         type: choice
         options:
