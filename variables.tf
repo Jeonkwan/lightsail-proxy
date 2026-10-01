@@ -16,10 +16,13 @@ variable "aws_cred_file_path" {
 variable "regions" {
   type = map(string)
   default = {
-    singapore = "ap-southeast-1"
-    japan     = "ap-northeast-1"
-    korea     = "ap-northeast-2"
-    india     = "ap-south-1"
+    singapore  = "ap-southeast-1"
+    japan      = "ap-northeast-1"
+    korea      = "ap-northeast-2"
+    india      = "ap-south-1"
+    oregon     = "us-west-2"
+    california = "us-west-2" # Lightsail only offers us-west-2 (Oregon) for US West; California is EC2 only (Oregon is 0% sales tax)
+    us-west    = "us-west-2"
   }
 }
 
@@ -34,7 +37,7 @@ variable "zones" {
     a = "a" # support all
     b = "b" # except japan
     c = "c" # support all
-    d = "d" # support only korea, japan
+    d = "d" # support korea, japan, oregon / us-west
   }
 }
 

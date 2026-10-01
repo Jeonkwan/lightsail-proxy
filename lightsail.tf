@@ -1,6 +1,9 @@
 locals {
   instance_name                  = "${var.instance_name_prefix}-${var.selected_country}-${var.zones[var.selected_zone]}-${var.instance_customizable_name}"
   proxy_solution_requires_ddns   = contains(["trojan-go", "less-vision"], var.proxy_solution) || (var.namecheap_ddns_password != "" && var.namecheap_ddns_password != "youShouldPassItOnTheFly")
+  # Use nano_3_0 for newly supported US West regions (required by current AWS Lightsail bundles with IPv4),
+  # while preserving user overrides or nano_2_0 for legacy regions to avoid forced replacement.
+  bundle_id                      = var.machine_config["instance_type"] != "nano_2_0" ? var.machine_config["instance_type"] : (contains(["oregon", "california", "us-west"], var.selected_country) ? "nano_3_0" : var.machine_config["instance_type"])
 }
 
 resource "aws_lightsail_static_ip_attachment" "lightsail_instance_ip_attachment" {
@@ -50,7 +53,7 @@ resource "aws_lightsail_instance" "lightsail_instance" {
   name              = "${local.instance_name}-${formatdate("YYYYMMDDhhmmss", timestamp())}"
   availability_zone = "${var.regions[var.selected_country]}${var.zones[var.selected_zone]}"
   blueprint_id      = var.machine_config["os"]
-  bundle_id         = var.machine_config["instance_type"]
+  bundle_id         = local.bundle_id
   key_pair_name     = aws_lightsail_key_pair.ssh.name
   user_data = templatefile(
     "${path.module}/scripts/cloud-init/setup_ubuntu.sh.tftpl",

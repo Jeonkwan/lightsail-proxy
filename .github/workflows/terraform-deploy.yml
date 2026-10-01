@@ -42,8 +42,10 @@ on:
           - japan
           - korea
           - india
+          - oregon
+          - california
       selected_zone:
-        description: "Override zone (optional). Compatibility: a & c (all), b (all except japan), d (only japan & korea)"
+        description: "Override zone (optional). Compatibility: a, b, c, d (all 4 zones supported in Oregon; for Asia: a & c all, b except japan, d japan & korea)"
         required: false
         type: choice
         options:

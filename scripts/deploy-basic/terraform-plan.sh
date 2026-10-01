@@ -120,6 +120,7 @@ try:
         elif region == "ap-south-1": country = "india"
         elif region == "ap-east-1": country = "hong kong"
         elif region == "ap-southeast-3": country = "indonesia"
+        elif region == "us-west-2": country = "oregon"
         else: country = "singapore"
         print(f"{country} {zone_suffix} {region}")
         sys.exit(0)
@@ -139,6 +140,7 @@ if [[ -n "${OLD_STATE_INFO}" ]]; then
     india)     TARGET_REGION="ap-south-1" ;;
     "hong kong") TARGET_REGION="ap-east-1" ;;
     indonesia) TARGET_REGION="ap-southeast-3" ;;
+    oregon|california|us-west) TARGET_REGION="us-west-2" ;;
     *)         TARGET_REGION="ap-southeast-1" ;;
   esac
   
