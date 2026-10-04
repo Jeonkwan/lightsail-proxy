@@ -1,169 +1,81 @@
-name: terraform-deploy
-
+name: Reboot cream through Lightsail API
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "*.tf"
-      - "scripts/deploy-basic/**"
-      - ".github/workflows/terraform-deploy.yml"
   workflow_dispatch:
-    inputs:
-      workspace:
-        description: "Terraform workspace to target (e.g. testing, expresso, jp-c)"
-        required: true
-        default: "testing"
-        type: string
-      tf_action:
-        description: "Terraform action"
-        required: true
-        default: "plan"
-        type: choice
-        options:
-          - plan
-          - apply
-          - destroy
-          - test-full-cycle
-      namecheap_ddns_password:
-        description: "Override Namecheap DDNS password (optional)"
-        required: false
-        type: string
-      proxy_server_uuid:
-        description: "Override Proxy Server UUID (optional)"
-        required: false
-        type: string
-      selected_country:
-        description: "Override country (optional)"
-        required: false
-        type: choice
-        options:
-          - ""
-          - singapore
-          - japan
-          - korea
-          - india
-          - oregon
-          - california
-      selected_zone:
-        description: "Override zone (optional). Compatibility: a, b, c, d (all 4 zones supported in Oregon; for Asia: a & c all, b except japan, d japan & korea)"
-        required: false
-        type: choice
-        options:
-          - ""
-          - a
-          - b
-          - c
-          - d
-      domain_name:
-        description: "Override domain name (optional)"
-        required: false
-        type: string
-      proxy_solution:
-        description: "Override proxy solution (optional)"
-        required: false
-        type: choice
-        options:
-          - ""
-          - trojan-go
-          - less-vision
-          - less-vision-reality
-          - basic-vm
-      proxy_contact_email:
-        description: "Override proxy contact email (optional, required for less-vision)"
-        required: false
-        type: string
-      playbook_branch:
-        description: "Override Ansible playbook branch (optional, defaults to 'main')"
-        required: false
-        default: "main"
-        type: string
-
+permissions:
+  contents: read
+concurrency:
+  group: lightsail-cream-recovery
+  cancel-in-progress: false
 jobs:
-  deploy:
-    name: "[${{ github.event.inputs.workspace || 'testing' }}] - ${{ github.event.inputs.tf_action || 'test-full-cycle' }}"
+  reboot:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: prod-basic
     env:
-      TF_WORKSPACE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace || 'testing' }}
-      TF_ACTION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tf_action || 'test-full-cycle' }}
-      TF_PLAN_DIR: artifacts/terraform
-      
-      # AWS credentials from GitHub Secrets
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: ${{ vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
-      
-      # SSH Public Key from GitHub Secrets
-      SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
-      
-      # Base environment path variables
-      TF_VAR_aws_profile: "default"
-      TF_VAR_aws_conf_file_path: "~/.aws/config"
-      TF_VAR_aws_cred_file_path: "~/.aws/credentials"
-      TF_VAR_ssh_public_key_path: "~/.ssh/jeonkwan-mbp.pub"
-      TF_VAR_ssh_private_key_path: "~/.ssh/jeonkwan-mbp"
-      
-      # Workspace and instance name mapping
-      TF_VAR_instance_customizable_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace || 'testing' }}
-      TF_VAR_subdomain_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace || 'testing' }}
-      
-      # Environment configurations (Inputs override -> repo variables -> defaults)
-      TF_VAR_selected_country: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.selected_country != '' && github.event.inputs.selected_country || vars.TF_VAR_selected_country || 'singapore' }}
-      TF_VAR_selected_zone: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.selected_zone != '' && github.event.inputs.selected_zone || vars.TF_VAR_selected_zone || 'a' }}
-      TF_VAR_domain_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.domain_name != '' && github.event.inputs.domain_name || vars.TF_VAR_domain_name || 'example.com' }}
-      TF_VAR_proxy_solution: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.proxy_solution != '' && github.event.inputs.proxy_solution || vars.TF_VAR_proxy_solution || 'trojan-go' }}
-      TF_VAR_proxy_contact_email: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.proxy_contact_email != '' && github.event.inputs.proxy_contact_email || vars.TF_VAR_proxy_contact_email || '' }}
-      TF_VAR_playbook_branch: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.playbook_branch != '' && github.event.inputs.playbook_branch || vars.TF_VAR_playbook_branch || 'main' }}
-      TF_VAR_namecheap_ddns_password: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.namecheap_ddns_password != '' && github.event.inputs.namecheap_ddns_password || secrets.NAMECHEAP_DDNS_PASS || 'youShouldPassItOnTheFly' }}
-      TF_VAR_proxy_server_uuid: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.proxy_server_uuid != '' && github.event.inputs.proxy_server_uuid || secrets.PROXY_SERVER_UUID || '00000000-0000-4000-8000-000000000000' }}
-      
-      # less-vision-reality specific secrets mapping (JSON list parsing for short IDs)
-      TF_VAR_less_vision_reality_short_ids: ${{ secrets.LESS_VISION_REALITY_SHORT_IDS || '[]' }}
-      TF_VAR_less_vision_reality_private_key: ${{ secrets.LESS_VISION_REALITY_PRIVATE_KEY || '' }}
-      TF_VAR_less_vision_reality_public_key: ${{ secrets.LESS_VISION_REALITY_PUBLIC_KEY || '' }}
-      TF_VAR_less_vision_reality_decoy_domain: ${{ secrets.LESS_VISION_REALITY_DECOY_DOMAIN || 'web.wechat.com' }}
-
-      # Backend configuration overrides from variables/secrets
-      TF_BACKEND_BUCKET: ${{ vars.TF_BACKEND_BUCKET }}
-      TF_BACKEND_KEY: ${{ vars.TF_BACKEND_KEY }}
-      TF_BACKEND_REGION: ${{ vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
-
+      AWS_DEFAULT_REGION: ap-southeast-1
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.6.6
-
-      - name: Bootstrap credentials and backend
-        env:
-          VARS_CONTEXT: ${{ toJSON(vars) }}
+      - name: Install AWS SDK
+        run: python3 -m pip install boto3
+      - name: Validate cream identity, collect status and reboot
+        shell: bash
         run: |
-          chmod +x scripts/deploy-basic/*.sh
-          scripts/deploy-basic/bootstrap-env.sh
-
-      - name: Terraform plan
-        run: scripts/deploy-basic/terraform-plan.sh
-
-      - name: Terraform apply or destroy
-        if: env.TF_ACTION != 'plan'
-        run: scripts/deploy-basic/terraform-apply.sh
-
-      - name: Publish summary
-        if: always()
-        run: |
-          if [ -f artifacts/terraform/summary.md ]; then
-            cat artifacts/terraform/summary.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "No summary generated" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Upload artifacts on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-logs
-          path: artifacts/terraform/
-          if-no-files-found: warn
+          set -euo pipefail
+          python3 - <<'PY'
+          import boto3,datetime,json,socket,time
+          client=boto3.client('lightsail',region_name='ap-southeast-1')
+          name='lightsail-singapore-a-cream-20261002012159'
+          expected_ip='54.254.18.227'
+          instance=client.get_instance(instanceName=name)['instance']
+          print('Instance:',instance['name'],'State:',instance['state']['name'],'IP:',instance.get('publicIpAddress'))
+          if instance['name']!=name or instance.get('publicIpAddress')!=expected_ip:
+              raise SystemExit('Instance identity/IP differs from verified cream deployment; refusing reboot.')
+          if instance['state']['name']!='running':
+              raise SystemExit('Cream is not running; refusing to perform an unexpected start/stop operation.')
+          print('Instance status:',json.dumps(client.get_instance_state(instanceName=name)['state']))
+          try:
+              ports=client.get_instance_port_states(instanceName=name)['portStates']
+              print('Public firewall port states:',json.dumps(ports))
+          except Exception as e:
+              print('Firewall read unavailable:',type(e).__name__)
+          try:
+              end=datetime.datetime.now(datetime.timezone.utc)
+              metrics=client.get_instance_metric_data(instanceName=name,metricName='CPUUtilization',period=300,
+                  startTime=end-datetime.timedelta(hours=24),endTime=end,unit='Percent',statistics=['Average','Maximum'])['metricData']
+              print('Recent CPU metrics:',json.dumps(metrics[-12:],default=str))
+          except Exception as e:
+              print('Metric read unavailable:',type(e).__name__)
+          for port in (22,443):
+              try:
+                  with socket.create_connection((expected_ip,port),timeout=5): pass
+                  print('Before reboot TCP',port,'PASS')
+              except OSError as e: print('Before reboot TCP',port,'FAIL',str(e))
+          result=client.reboot_instance(instanceName=name)
+          for operation in result['operations']:
+              print('Reboot operation:',operation['id'],operation['status'])
+              for attempt in range(60):
+                  current=client.get_operation(operationId=operation['id'])['operation']
+                  if current.get('isTerminal'):
+                      print('Reboot terminal result:',json.dumps(current,default=str))
+                      if current['status'] not in ('Succeeded','Completed'):
+                          raise SystemExit('AWS reboot operation failed.')
+                      break
+                  time.sleep(2)
+              else: raise SystemExit('AWS reboot operation did not finish within two minutes.')
+          deadline=time.monotonic()+300
+          time.sleep(15)
+          while time.monotonic()<deadline:
+              results={}
+              for port in (22,443):
+                  try:
+                      with socket.create_connection((expected_ip,port),timeout=3): pass
+                      results[port]=True
+                  except OSError: results[port]=False
+              print('Post-reboot TCP checks:',results,flush=True)
+              if all(results.values()):
+                  print('Cream SSH and proxy ports recovered after reboot.')
+                  break
+              time.sleep(10)
+          else: raise SystemExit('Reboot finished, but SSH/proxy ports did not both recover within five minutes.')
+          PY
