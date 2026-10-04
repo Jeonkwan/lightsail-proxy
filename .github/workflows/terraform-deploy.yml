@@ -92,9 +92,18 @@ jobs:
 
         assert y[''status'']==''completed'' and y[''conclusion'']==''success''
 
-        assert y[''head_branch'']==''migration/reboot-flatwhite'' and y[''head_sha'']==''c1e31377f2526da5921047a3e242f8bc20072876''
+        assert y[''head_branch'']==''migration/inspect-flatwhite'' and y[''head_sha'']==''655edaa5483db1ed30ff1ecc6034b2245d8b076c''
 
-        print(''Flat White post-reboot authenticated validation succeeded:'',y[''html_url''])
+        print(''Flat White stabilized post-recovery authenticated validation succeeded:'',y[''html_url''])
+
+        with urllib.request.urlopen(''https://api.github.com/repos/Jeonkwan/lightsail-proxy/actions/runs/37186142347'',timeout=20)
+        as z: recovery=json.load(z)
+
+        assert recovery[''status'']==''completed'' and recovery[''conclusion'']==''success''
+
+        assert recovery[''head_branch'']==''migration/recover-flatwhite'' and recovery[''head_sha'']==''3bcba8602bb1f2b9e99aa1e4f46e07f1933f5401''
+
+        print(''Flat White API reboot recovery succeeded:'',recovery[''html_url''])
 
         CHECK
 
@@ -196,7 +205,7 @@ jobs:
         required: true
         type: string
       boot_validation_run:
-        description: Successful Flat White post-reboot client-validation run ID
+        description: Successful stabilized post-recovery client-validation run ID
         required: true
         type: string
 run-name: Retire cream after validation ${{ inputs.validation_run }}
