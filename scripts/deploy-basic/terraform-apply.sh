@@ -77,7 +77,7 @@ if [[ -f "${WORKSPACE_NAME}.tfvars" ]]; then
 fi
 
 if [[ "${TF_ACTION}" == "destroy" ]]; then
-  terraform destroy "${VAR_FILE_ARGS[@]}" "${VAR_ARGS[@]}" -auto-approve
+  terraform apply -input=false "${TF_PLAN_FILE}"
 elif [[ "${TF_ACTION}" == "test-full-cycle" ]]; then
   echo "Starting full cycle test: Apply..."
   terraform apply -input=false "${TF_PLAN_FILE}"
