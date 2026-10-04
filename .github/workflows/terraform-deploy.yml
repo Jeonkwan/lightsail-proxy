@@ -92,9 +92,10 @@ jobs:
 
         assert y[''status'']==''completed'' and y[''conclusion'']==''success''
 
-        assert y[''head_branch'']==''migration/inspect-flatwhite'' and y[''head_sha'']==''655edaa5483db1ed30ff1ecc6034b2245d8b076c''
+        assert y[''head_branch'']==''migration/fix-flatwhite-kernel'' and y[''head_sha'']==''7f422d6400d19cb708d811120bdf0ab181612c5f''
 
-        print(''Flat White stabilized post-recovery authenticated validation succeeded:'',y[''html_url''])
+        print(''Flat White kernel rollback and post-reboot authenticated validation
+        succeeded:'',y[''html_url''])
 
         with urllib.request.urlopen(''https://api.github.com/repos/Jeonkwan/lightsail-proxy/actions/runs/37186142347'',timeout=20)
         as z: recovery=json.load(z)
@@ -104,6 +105,15 @@ jobs:
         assert recovery[''head_branch'']==''migration/recover-flatwhite'' and recovery[''head_sha'']==''3bcba8602bb1f2b9e99aa1e4f46e07f1933f5401''
 
         print(''Flat White API reboot recovery succeeded:'',recovery[''html_url''])
+
+        with urllib.request.urlopen(''https://api.github.com/repos/Jeonkwan/less-vision-reality/actions/runs/37186487478'',timeout=20)
+        as z: stable=json.load(z)
+
+        assert stable[''status'']==''completed'' and stable[''conclusion'']==''success''
+
+        assert stable[''head_sha'']==''655edaa5483db1ed30ff1ecc6034b2245d8b076c''
+
+        print(''Failed daily OS reboot disabled:'',stable[''html_url''])
 
         CHECK
 
@@ -205,7 +215,8 @@ jobs:
         required: true
         type: string
       boot_validation_run:
-        description: Successful stabilized post-recovery client-validation run ID
+        description: Successful kernel rollback and post-reboot authenticated validation
+          run ID
         required: true
         type: string
 run-name: Retire cream after validation ${{ inputs.validation_run }}
