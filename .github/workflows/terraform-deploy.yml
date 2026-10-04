@@ -62,6 +62,7 @@ jobs:
     - name: Require successful Flat White client validation and verify live target
       env:
         VALIDATION_RUN: ${{ inputs.validation_run }}
+        BOOT_VALIDATION_RUN: ${{ inputs.boot_validation_run }}
       run: 'set -euo pipefail
 
         python3 - <<''CHECK''
@@ -83,6 +84,17 @@ jobs:
         assert x[''head_sha'']==''83f17aa5165c437fea901e9701e343d12071d91b''
 
         print(''Flat White authenticated validation succeeded:'',x[''html_url''])
+
+        boot=os.environ[''BOOT_VALIDATION_RUN''];assert boot.isdigit()
+
+        with urllib.request.urlopen(''https://api.github.com/repos/Jeonkwan/less-vision-reality/actions/runs/''+boot,timeout=20)
+        as r: y=json.load(r)
+
+        assert y[''status'']==''completed'' and y[''conclusion'']==''success''
+
+        assert y[''head_branch'']==''migration/reboot-flatwhite'' and y[''head_sha'']==''c1e31377f2526da5921047a3e242f8bc20072876''
+
+        print(''Flat White post-reboot authenticated validation succeeded:'',y[''html_url''])
 
         CHECK
 
@@ -181,6 +193,10 @@ jobs:
     inputs:
       validation_run:
         description: Successful Flat White client-validation run ID
+        required: true
+        type: string
+      boot_validation_run:
+        description: Successful Flat White post-reboot client-validation run ID
         required: true
         type: string
 run-name: Retire cream after validation ${{ inputs.validation_run }}
