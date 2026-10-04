@@ -199,3 +199,11 @@ flowchart TD
 - **Safer secret distribution** – Terraform injects sensitive values (Namecheap token, proxy UUID, contact email) into the template so the secrets stay transient and only touch the VM that needs them.
 - **Predictable rebuilds** – Each `terraform apply` replaces the instance with a fresh host that replays the same cloud-init script, guaranteeing that Trojan-Go and less-vision stay in sync with the repository.
 - **Future expansion** – Adding another solution only requires creating `scripts/<new-solution>/setup.sh` plus its playbook; cloud-init will handle detection and dispatching once `proxy_solution` points to it.
+# Host maintenance
+
+New instances do not schedule daily reboots. Cloud-init limits persistent system
+journal storage to 100 MB and runtime journal storage to 32 MB. Reboot only for
+maintenance that requires it, followed by an authenticated proxy check.
+
+This fresh-instance bootstrap does not remove jobs on existing hosts. Proxy
+container logging is configured by the separate proxy deployment repository.

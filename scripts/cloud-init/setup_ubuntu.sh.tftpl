@@ -26,12 +26,15 @@ if [ ! -f /swapfile ]; then
     echo '/swapfile none swap sw 0 0' >> /etc/fstab
 fi
 
-# Configure daily reboot at 5:00 AM China Time (21:00 UTC)
-cat <<'EOF' > /etc/cron.d/daily-reboot
-0 21 * * * root /sbin/shutdown -r now
+# Bound host logs without scheduling routine restarts.
+mkdir -p /etc/systemd/journald.conf.d
+cat <<'EOF' > /etc/systemd/journald.conf.d/50-proxy-retention.conf
+[Journal]
+SystemMaxUse=100M
+RuntimeMaxUse=32M
 EOF
-chmod 644 /etc/cron.d/daily-reboot
-chown root:root /etc/cron.d/daily-reboot
+chmod 644 /etc/systemd/journald.conf.d/50-proxy-retention.conf
+systemctl restart systemd-journald
 
 wait_for_apt() {
     # Lightsail images often run unattended upgrades on first boot; wait until locks clear.
