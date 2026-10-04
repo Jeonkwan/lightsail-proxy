@@ -86,6 +86,19 @@ if [[ -f "${WORKSPACE_NAME}.tfvars" ]]; then
   VAR_FILE_ARGS+=("-var-file=${WORKSPACE_NAME}.tfvars")
 fi
 
+# Migration guard: never let the legacy region-migration block destroy an old Flat White state.
+if terraform state pull > "$TF_PLAN_DIR/preflight-state.json" 2>/dev/null; then
+  python3 - "$TF_PLAN_DIR/preflight-state.json" <<'STATECHECK'
+import json,sys
+s=json.load(open(sys.argv[1]))
+resources=[r for r in s.get('resources',[]) if r.get('mode')=='managed' and r.get('type','').startswith('aws_lightsail_') and r.get('instances')]
+if resources:
+ print('Existing Flat White Lightsail resources found:',[r['type'] for r in resources])
+ raise SystemExit('Refusing automatic replacement/deletion of existing Flat White resources')
+STATECHECK
+fi
+rm -f "$TF_PLAN_DIR/preflight-state.json"
+
 # Auto-detect region mismatch and clean up resources in the old region first
 OLD_STATE_INFO=$(terraform state pull 2>/dev/null | python3 -c '
 import sys, json
