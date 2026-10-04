@@ -1,5 +1,5 @@
 name: Recover Flat White through Lightsail API
-true:
+'on':
   workflow_dispatch: null
 permissions:
   contents: read
