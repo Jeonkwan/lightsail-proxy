@@ -31,10 +31,11 @@ and complete supplied personal client files are never committed. Runner tests
 exercise the provided Clash/mihomo and sing-box proxy settings, not iOS TUN/DNS
 integration or a particular mobile ISP path.
 
-Authorized sequence: clean Cream, baseline binary, latest stable binary, then fresh
-Flat White retaining its static IP, then Cream cleanup after Flat White passes.
-No 24-hour soak is required for this experiment. Keep Decaf serving throughout.
-Terraform operations validate exact target identity and resource scope, preserve
+The initial sequence validated Cream, then fresh Flat White retaining its static
+IP, and retired Cream. The follow-up replaces Decaf in Singapore zone C while
+Flat White keeps serving. No 24-hour soak is required for these authorized tests.
+Terraform operations support Cream/Flat White in zone A and Decaf in zone C.
+They validate exact target identity and resource scope, preserve
 other instances, and guard instance-only replacement so static IP/key/DNS remain.
 Destruction removes owned snapshots, an empty workspace and parks retired DNS.
 Both product PRs remain draft until explicitly approved for merge.

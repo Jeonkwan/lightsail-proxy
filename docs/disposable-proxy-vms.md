@@ -26,4 +26,9 @@ Replacement workflow:
 
 Review replacements monthly and act sooner for relevant security advisories. Replacement is the patch mechanism, not a reason to stop patching. No product PR is merged without owner confirmation.
 
-Current authorized experiment: create clean Cream, test native 25.10.15 and reviewed latest stable 26.3.27 with both supplied client profiles, replace Flat White while preserving its static IP, validate it, then retire Cream. Decaf remains untouched. The owner waived a 24-hour soak for this experiment; authenticated connection and lifecycle checks are the acceptance gate. Live credentials exist only in GitHub Actions environments; never put client UUIDs/private keys in evidence or docs.
+The first authorized native migration validated clean Cream with Xray 25.10.15 and
+26.3.27, replaced Flat White while preserving its static IP, and retired Cream.
+The owner then authorized replacing Decaf with a fresh native host in its existing
+Singapore zone C, preserving the static IP/credentials and keeping Flat White
+serving. No 24-hour soak is required; authenticated client and lifecycle checks
+are the acceptance gate. Credentials stay in GitHub Actions environments.

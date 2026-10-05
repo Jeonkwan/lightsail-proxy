@@ -89,6 +89,7 @@ access. Neither is required to begin development.
 terraform init -backend=false -input=false -lockfile=readonly
 terraform validate
 python3 scripts/tests/test_proxy_bootstrap.py
+python3 scripts/tests/test_native_infrastructure.py
 git diff --check
 ```
 

@@ -1,5 +1,5 @@
 """Reject unsafe replacement plans before any Terraform apply."""
-import contextlib, copy, importlib.util, io, json, os, pathlib, unittest
+import contextlib, importlib.util, io, json, os, pathlib, unittest
 from unittest.mock import patch
 
 path = pathlib.Path(__file__).resolve().parents[1] / 'native-infrastructure.py'
