@@ -14,11 +14,17 @@ run-name: 'Native infrastructure: ${{ inputs.operation }} ${{ inputs.target }}'
         type: choice
         options:
         - inspect
+        - authorize
         - create
         - replace
         - destroy
         required: true
         default: inspect
+      public_key:
+        type: string
+        required: false
+        default: ""
+        description: Public deployment key for selected test host
       expected_instance:
         type: string
         required: false
@@ -56,6 +62,7 @@ jobs:
       TF_BACKEND_REGION: ${{ vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
       TARGET: ${{ inputs.target }}
       OPERATION: ${{ inputs.operation }}
+      PUBLIC_KEY: ${{ inputs.public_key }}
       EXPECTED_INSTANCE: ${{ inputs.expected_instance }}
     steps:
     - uses: actions/checkout@v4
