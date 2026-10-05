@@ -52,3 +52,6 @@ jobs:
 
       - name: Terraform validate
         run: terraform validate
+
+      - name: Validate bootstrap first boot, resume and reboot guard
+        run: python3 scripts/tests/test_proxy_bootstrap.py

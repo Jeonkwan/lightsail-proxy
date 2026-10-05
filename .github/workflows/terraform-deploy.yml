@@ -54,7 +54,13 @@ jobs:
 
         '
     - name: Retire only failed first-boot Flat White before clean retest
-      run: "set -euo pipefail\nexport TF_VAR_instance_customizable_name=flatwhite\
+      run: "set -euo pipefail\naws lightsail get-instances --region ap-southeast-1\
+        \ > \"$RUNNER_TEMP/serving-peers.json\"\npython3 - <<'PEERS'\nimport json,os\n\
+        items=json.load(open(os.environ['RUNNER_TEMP']+'/serving-peers.json'))['instances']\n\
+        for name,ip in {'lightsail-singapore-a-cream-20261004151043':'13.250.199.129','lightsail-singapore-c-decaf-20260730010620':'52.74.81.140'}.items():\n\
+        \ x=next(x for x in items if x['name']==name);assert x['publicIpAddress']==ip\
+        \ and x['state']['name']=='running';print('Verified serving peer before test-host\
+        \ destruction:',name,ip)\nPEERS\nexport TF_VAR_instance_customizable_name=flatwhite\
         \ TF_VAR_subdomain_name=flatwhite TF_VAR_selected_country=singapore TF_VAR_selected_zone=a\
         \ TF_VAR_proxy_solution=basic-vm TF_VAR_domain_name=mokamaker.site\naws lightsail\
         \ get-instance --instance-name lightsail-singapore-a-flatwhite-20261005023816\
