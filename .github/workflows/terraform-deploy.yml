@@ -1,169 +1,150 @@
-name: terraform-deploy
-
-on:
-  push:
-    branches: ["main"]
-    paths:
-      - "*.tf"
-      - "scripts/deploy-basic/**"
-      - ".github/workflows/terraform-deploy.yml"
-  workflow_dispatch:
-    inputs:
-      workspace:
-        description: "Terraform workspace to target (e.g. testing, expresso, jp-c)"
-        required: true
-        default: "testing"
-        type: string
-      tf_action:
-        description: "Terraform action"
-        required: true
-        default: "plan"
-        type: choice
-        options:
-          - plan
-          - apply
-          - destroy
-          - test-full-cycle
-      namecheap_ddns_password:
-        description: "Override Namecheap DDNS password (optional)"
-        required: false
-        type: string
-      proxy_server_uuid:
-        description: "Override Proxy Server UUID (optional)"
-        required: false
-        type: string
-      selected_country:
-        description: "Override country (optional)"
-        required: false
-        type: choice
-        options:
-          - ""
-          - singapore
-          - japan
-          - korea
-          - india
-          - oregon
-          - california
-      selected_zone:
-        description: "Override zone (optional). Compatibility: a, b, c, d (all 4 zones supported in Oregon; for Asia: a & c all, b except japan, d japan & korea)"
-        required: false
-        type: choice
-        options:
-          - ""
-          - a
-          - b
-          - c
-          - d
-      domain_name:
-        description: "Override domain name (optional)"
-        required: false
-        type: string
-      proxy_solution:
-        description: "Override proxy solution (optional)"
-        required: false
-        type: choice
-        options:
-          - ""
-          - trojan-go
-          - less-vision
-          - less-vision-reality
-          - basic-vm
-      proxy_contact_email:
-        description: "Override proxy contact email (optional, required for less-vision)"
-        required: false
-        type: string
-      playbook_branch:
-        description: "Override Ansible playbook branch (optional, defaults to 'main')"
-        required: false
-        default: "main"
-        type: string
-
+name: Destroy and clean up Flat White
 jobs:
   deploy:
-    name: "[${{ github.event.inputs.workspace || 'testing' }}] - ${{ github.event.inputs.tf_action || 'test-full-cycle' }}"
+    name: Guarded Flat White retirement
     runs-on: ubuntu-latest
     environment: prod-basic
     env:
-      TF_WORKSPACE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace || 'testing' }}
-      TF_ACTION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tf_action || 'test-full-cycle' }}
+      TF_WORKSPACE: flatwhite
+      TF_ACTION: destroy
       TF_PLAN_DIR: artifacts/terraform
-      
-      # AWS credentials from GitHub Secrets
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: ${{ vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
-      
-      # SSH Public Key from GitHub Secrets
       SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
-      
-      # Base environment path variables
-      TF_VAR_aws_profile: "default"
-      TF_VAR_aws_conf_file_path: "~/.aws/config"
-      TF_VAR_aws_cred_file_path: "~/.aws/credentials"
-      TF_VAR_ssh_public_key_path: "~/.ssh/jeonkwan-mbp.pub"
-      TF_VAR_ssh_private_key_path: "~/.ssh/jeonkwan-mbp"
-      
-      # Workspace and instance name mapping
-      TF_VAR_instance_customizable_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace || 'testing' }}
-      TF_VAR_subdomain_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace || 'testing' }}
-      
-      # Environment configurations (Inputs override -> repo variables -> defaults)
-      TF_VAR_selected_country: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.selected_country != '' && github.event.inputs.selected_country || vars.TF_VAR_selected_country || 'singapore' }}
-      TF_VAR_selected_zone: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.selected_zone != '' && github.event.inputs.selected_zone || vars.TF_VAR_selected_zone || 'a' }}
-      TF_VAR_domain_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.domain_name != '' && github.event.inputs.domain_name || vars.TF_VAR_domain_name || 'example.com' }}
-      TF_VAR_proxy_solution: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.proxy_solution != '' && github.event.inputs.proxy_solution || vars.TF_VAR_proxy_solution || 'trojan-go' }}
-      TF_VAR_proxy_contact_email: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.proxy_contact_email != '' && github.event.inputs.proxy_contact_email || vars.TF_VAR_proxy_contact_email || '' }}
-      TF_VAR_playbook_branch: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.playbook_branch != '' && github.event.inputs.playbook_branch || vars.TF_VAR_playbook_branch || 'main' }}
-      TF_VAR_namecheap_ddns_password: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.namecheap_ddns_password != '' && github.event.inputs.namecheap_ddns_password || secrets.NAMECHEAP_DDNS_PASS || 'youShouldPassItOnTheFly' }}
-      TF_VAR_proxy_server_uuid: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.proxy_server_uuid != '' && github.event.inputs.proxy_server_uuid || secrets.PROXY_SERVER_UUID || '00000000-0000-4000-8000-000000000000' }}
-      
-      # less-vision-reality specific secrets mapping (JSON list parsing for short IDs)
-      TF_VAR_less_vision_reality_short_ids: ${{ secrets.LESS_VISION_REALITY_SHORT_IDS || '[]' }}
-      TF_VAR_less_vision_reality_private_key: ${{ secrets.LESS_VISION_REALITY_PRIVATE_KEY || '' }}
-      TF_VAR_less_vision_reality_public_key: ${{ secrets.LESS_VISION_REALITY_PUBLIC_KEY || '' }}
-      TF_VAR_less_vision_reality_decoy_domain: ${{ secrets.LESS_VISION_REALITY_DECOY_DOMAIN || 'web.wechat.com' }}
-
-      # Backend configuration overrides from variables/secrets
+      TF_VAR_aws_profile: default
+      TF_VAR_aws_conf_file_path: ~/.aws/config
+      TF_VAR_aws_cred_file_path: ~/.aws/credentials
+      TF_VAR_ssh_public_key_path: ~/.ssh/jeonkwan-mbp.pub
+      TF_VAR_ssh_private_key_path: ~/.ssh/jeonkwan-mbp
+      TF_VAR_instance_customizable_name: flatwhite
+      TF_VAR_subdomain_name: flatwhite
+      TF_VAR_selected_country: singapore
+      TF_VAR_selected_zone: a
+      TF_VAR_domain_name: mokamaker.site
+      TF_VAR_proxy_solution: basic-vm
+      TF_VAR_proxy_contact_email: ''
+      TF_VAR_playbook_branch: main
+      TF_VAR_namecheap_ddns_password: ${{ secrets.NAMECHEAP_DDNS_PASS }}
+      TF_VAR_proxy_server_uuid: 00000000-0000-4000-8000-000000000000
+      TF_VAR_less_vision_reality_short_ids: ${{ secrets.LESS_VISION_REALITY_SHORT_IDS
+        || '[]' }}
+      TF_VAR_less_vision_reality_private_key: ${{ secrets.LESS_VISION_REALITY_PRIVATE_KEY
+        || '' }}
+      TF_VAR_less_vision_reality_public_key: ${{ secrets.LESS_VISION_REALITY_PUBLIC_KEY
+        || '' }}
+      TF_VAR_less_vision_reality_decoy_domain: ${{ secrets.LESS_VISION_REALITY_DECOY_DOMAIN
+        || 'web.wechat.com' }}
       TF_BACKEND_BUCKET: ${{ vars.TF_BACKEND_BUCKET }}
       TF_BACKEND_KEY: ${{ vars.TF_BACKEND_KEY }}
       TF_BACKEND_REGION: ${{ vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+    - name: Check out repository
+      uses: actions/checkout@v4
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.6
+    - name: Bootstrap credentials and backend
+      env:
+        VARS_CONTEXT: ${{ toJSON(vars) }}
+      run: 'chmod +x scripts/deploy-basic/*.sh
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.6.6
+        scripts/deploy-basic/bootstrap-env.sh
 
-      - name: Bootstrap credentials and backend
-        env:
-          VARS_CONTEXT: ${{ toJSON(vars) }}
-        run: |
-          chmod +x scripts/deploy-basic/*.sh
-          scripts/deploy-basic/bootstrap-env.sh
+        '
+    - name: Fix exact retirement workspace after bootstrap
+      run: 'cat >> "$GITHUB_ENV" <<''CONFIG''
 
-      - name: Terraform plan
-        run: scripts/deploy-basic/terraform-plan.sh
+        TF_WORKSPACE=flatwhite
 
-      - name: Terraform apply or destroy
-        if: env.TF_ACTION != 'plan'
-        run: scripts/deploy-basic/terraform-apply.sh
+        TF_VAR_instance_customizable_name=flatwhite
 
-      - name: Publish summary
-        if: always()
-        run: |
-          if [ -f artifacts/terraform/summary.md ]; then
-            cat artifacts/terraform/summary.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "No summary generated" >> "$GITHUB_STEP_SUMMARY"
-          fi
+        TF_VAR_subdomain_name=flatwhite
 
-      - name: Upload artifacts on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-logs
-          path: artifacts/terraform/
-          if-no-files-found: warn
+        TF_VAR_selected_country=singapore
+
+        TF_VAR_selected_zone=a
+
+        TF_VAR_domain_name=mokamaker.site
+
+        TF_VAR_proxy_solution=basic-vm
+
+        CONFIG
+
+        '
+    - name: Verify target and preserve survivors
+      run: python3 scripts/operations/retire-flatwhite-guard.py before
+    - name: Plan destruction in existing workspace only
+      run: 'set -euo pipefail
+
+        unset TF_WORKSPACE
+
+        terraform init -input=false -backend-config="bucket=$TF_BACKEND_BUCKET" -backend-config="key=$TF_BACKEND_KEY"
+        -backend-config="region=$TF_BACKEND_REGION"
+
+        terraform workspace select flatwhite
+
+        mkdir -p artifacts/terraform
+
+        terraform plan -destroy -input=false -out=artifacts/terraform/retire.tfplan
+
+        terraform show -json artifacts/terraform/retire.tfplan > artifacts/terraform/plan.json
+
+        python3 scripts/operations/retire-flatwhite-guard.py plan
+
+        '
+    - name: Apply verified saved destruction plan
+      run: terraform apply -input=false artifacts/terraform/retire.tfplan
+    - name: Verify deletion, remove matching snapshots and empty workspace
+      run: 'set -euo pipefail
+
+        python3 scripts/operations/retire-flatwhite-guard.py after
+
+        terraform show -json > artifacts/terraform/empty-state.json
+
+        python3 - <<''CHECK''
+
+        import json
+
+        s=json.load(open(''artifacts/terraform/empty-state.json''))
+
+        assert not s.get(''values'',{}).get(''root_module'',{}).get(''resources''),
+        ''State is not empty''
+
+        CHECK
+
+        unset TF_WORKSPACE
+
+        terraform workspace select default
+
+        terraform workspace delete flatwhite
+
+        '
+    - name: Park retired DNS record
+      env:
+        DOMAIN: mokamaker.site
+        SUBDOMAIN: flatwhite
+        INSTANCE_PUBLIC_IP: 127.0.0.1
+        NAMECHEAP_DDNS_PASS: ${{ secrets.NAMECHEAP_DDNS_PASS }}
+      run: scripts/configure_namecheap_dns.sh
+    - name: Publish cleanup summary
+      run: 'cat >> "$GITHUB_STEP_SUMMARY" <<''SUMMARY''
+
+        Flat White instance, static IP, key pair and Terraform resources were removed.
+
+        Any Flat White instance snapshots were deleted. DNS is parked at 127.0.0.1.
+
+        Cream and Decaf remain running at their expected IPs. Shared credentials and
+        backends are retained.
+
+        SUMMARY
+
+        '
+    timeout-minutes: 20
+run-name: Retire Flat White; preserve Cream and Decaf
+concurrency:
+  group: flatwhite-retirement
+  cancel-in-progress: false
+'on':
+  workflow_dispatch: {}
