@@ -9,6 +9,35 @@ on:
       - ".github/workflows/terraform-deploy.yml"
   workflow_dispatch:
     inputs:
+      instance_operation:
+        description: Optional selected-host operation; requires explicit owner authorization
+        required: false
+        type: choice
+        default: ""
+        options: ["", inspect, create, replace, destroy]
+      instance_target:
+        description: Selected managed host; destroy/replace also requires exact expected_instance
+        required: false
+        type: choice
+        default: cream
+        options: [cream, flatwhite, decaf]
+      spare_operation:
+        description: Optional guarded spare operation; empty preserves normal workflow behavior
+        required: false
+        type: choice
+        default: ""
+        options: ["", inspect, create, destroy]
+      spare_target:
+        description: Disposable runtime-validation target only
+        required: false
+        type: choice
+        default: americano
+        options: [americano, latte]
+      expected_instance:
+        description: Exact spare instance identity required for destruction
+        required: false
+        type: string
+        default: ""
       workspace:
         description: "Terraform workspace to target (e.g. testing, expresso, jp-c)"
         required: true
@@ -80,6 +109,7 @@ on:
 
 jobs:
   deploy:
+    if: ${{ !inputs.spare_operation && !inputs.instance_operation }}
     name: "[${{ github.event.inputs.workspace || 'testing' }}] - ${{ github.event.inputs.tf_action || 'test-full-cycle' }}"
     runs-on: ubuntu-latest
     environment: prod-basic
@@ -167,3 +197,91 @@ jobs:
           name: terraform-logs
           path: artifacts/terraform/
           if-no-files-found: warn
+
+  spare:
+    if: ${{ inputs.spare_operation != '' && !inputs.instance_operation }}
+    runs-on: ubuntu-latest
+    environment: prod-basic
+    timeout-minutes: 25
+    env:
+      TF_WORKSPACE: ${{ inputs.spare_target }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ap-southeast-1
+      SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_aws_profile: default
+      TF_VAR_aws_conf_file_path: ~/.aws/config
+      TF_VAR_aws_cred_file_path: ~/.aws/credentials
+      TF_VAR_ssh_public_key_path: ~/.ssh/jeonkwan-mbp.pub
+      TF_VAR_ssh_private_key_path: ~/.ssh/jeonkwan-mbp
+      TF_VAR_instance_customizable_name: ${{ inputs.spare_target }}
+      TF_VAR_subdomain_name: ${{ inputs.spare_target }}
+      TF_VAR_selected_country: singapore
+      TF_VAR_selected_zone: ${{ inputs.spare_target == 'latte' && 'c' || 'a' }}
+      TF_VAR_domain_name: mokamaker.site
+      TF_VAR_proxy_solution: basic-vm
+      TF_VAR_playbook_branch: feature/selectable-xray-runtime
+      TF_VAR_namecheap_ddns_password: ""
+      TF_BACKEND_BUCKET: ${{ vars.TF_BACKEND_BUCKET }}
+      TF_BACKEND_KEY: ${{ vars.TF_BACKEND_KEY }}
+      TF_BACKEND_REGION: ${{ vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
+      SPARE_ONLY: "true"
+      TARGET: ${{ inputs.spare_target }}
+      OPERATION: ${{ inputs.spare_operation }}
+      EXPECTED_INSTANCE: ${{ inputs.expected_instance }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.6
+    - name: Configure credentials and isolated backend
+      env:
+        VARS_CONTEXT: ${{ toJSON(vars) }}
+      run: bash scripts/deploy-basic/bootstrap-env.sh
+    - name: Inspect and operate only selected resources
+      run: python3 scripts/native-infrastructure.py
+
+  selected-host:
+    if: ${{ inputs.instance_operation != '' && !inputs.spare_operation }}
+    concurrency:
+      group: native-infra-${{ inputs.instance_target }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    environment: prod-basic
+    timeout-minutes: 25
+    env:
+      TF_WORKSPACE: ${{ inputs.instance_target }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ap-southeast-1
+      SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_aws_profile: default
+      TF_VAR_aws_conf_file_path: ~/.aws/config
+      TF_VAR_aws_cred_file_path: ~/.aws/credentials
+      TF_VAR_ssh_public_key_path: ~/.ssh/jeonkwan-mbp.pub
+      TF_VAR_ssh_private_key_path: ~/.ssh/jeonkwan-mbp
+      TF_VAR_instance_customizable_name: ${{ inputs.instance_target }}
+      TF_VAR_subdomain_name: ${{ inputs.instance_target }}
+      TF_VAR_selected_country: singapore
+      TF_VAR_selected_zone: ${{ inputs.instance_target == 'decaf' && 'c' || 'a' }}
+      TF_VAR_domain_name: mokamaker.site
+      TF_VAR_proxy_solution: basic-vm
+      TF_VAR_playbook_branch: feature/selectable-xray-runtime
+      TF_VAR_namecheap_ddns_password: ${{ secrets.NAMECHEAP_DDNS_PASS }}
+      TF_BACKEND_BUCKET: ${{ vars.TF_BACKEND_BUCKET }}
+      TF_BACKEND_KEY: ${{ vars.TF_BACKEND_KEY }}
+      TF_BACKEND_REGION: ${{ vars.TF_BACKEND_REGION || 'ap-southeast-1' }}
+      TARGET: ${{ inputs.instance_target }}
+      OPERATION: ${{ inputs.instance_operation }}
+      EXPECTED_INSTANCE: ${{ inputs.expected_instance }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.6
+    - name: Configure credentials and isolated backend
+      env:
+        VARS_CONTEXT: ${{ toJSON(vars) }}
+      run: bash scripts/deploy-basic/bootstrap-env.sh
+    - name: Inspect and operate only selected resources
+      run: python3 scripts/native-infrastructure.py

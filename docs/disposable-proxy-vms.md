@@ -1,8 +1,10 @@
 # Disposable proxy VM strategy
 
+For selectable native/Docker deployment, switching and the spare-validation plan, see [selectable runtime](selectable-xray-runtime.md).
+
 Operate two independent Lightsail proxy VMs and use authenticated client URL testing for failover. Update by replacing one VM at a time, preserving a known-working peer. Client failover cannot guarantee availability during a shared network/provider outage.
 
-Use the current supported Ubuntu Lightsail blueprint in the chosen region and zone. Do not pin or hold an old kernel. Record blueprint, instance identity, running kernel, Xray binary version/checksum for each deployment. A current blueprint can lag upstream package security fixes: check its patch level and release/security notices before promotion. If it lacks an urgent fix, select a corrected image or perform a controlled provisioning-only update before serving traffic; never silently leave a known vulnerable image indefinitely.
+Use the current supported Ubuntu Lightsail blueprint in the chosen region and zone. Do not pin or hold an old kernel. Record blueprint, instance identity, running kernel, Xray binary version/checksum or Docker image version/digest for each deployment. A current blueprint can lag upstream package security fixes: check its patch level and release/security notices before promotion. If it lacks an urgent fix, select a corrected image or perform a controlled provisioning-only update before serving traffic; never silently leave a known vulnerable image indefinitely.
 
 Default ongoing maintenance policy:
 - No daily/periodic host or container reboot.
@@ -10,7 +12,7 @@ Default ongoing maintenance policy:
 - Hold automatic snap refresh indefinitely, including the preinstalled SSM agent/runtime; keep those services running. Disable optional firmware/update-notifier metadata timers.
 - No automatic update-triggered reboot. Explicit provisioning installs remain allowed.
 - Bound persistent journal storage to 100 MB and runtime journal storage to 32 MB; native Xray logs use journald, 10 MB journal files and seven-day maximum retention, without syslog forwarding.
-- Xray uses a reviewed release and pinned archive checksum. systemd restarts failed processes; no automatic binary updater.
+- Native Xray uses a reviewed release and pinned archive/binary checksums; systemd restarts failures. Docker uses the pinned official image with unless-stopped recovery and bounded json-file logs. Neither runtime has an automatic updater.
 - Manual APT access remains available for recovery; no kernel holds are introduced.
 
 Basic-VM cloud-init checks CA certificates and Python3 and installs only missing requirements. Ansible and release verification/extraction execute on the GitHub runner; no Docker, Compose, GPG, curl or lsb-release is explicitly installed by basic bootstrap. Legacy deployment modes retain the tools their local playbooks need. Small-host swap remains configured.
@@ -32,3 +34,10 @@ The owner then authorized replacing Decaf with a fresh native host in its existi
 Singapore zone C, preserving the static IP/credentials and keeping Flat White
 serving. No 24-hour soak is required; authenticated client and lifecycle checks
 are the acceptance gate. Credentials stay in GitHub Actions environments.
+
+The subsequent owner-selected Cream replacement uses Docker 26.3.27 and a narrower
+acceptance gate: deployment plus supplied sing-box/mihomo IP and hostname connections.
+Keep Cream on success, retire exact Flat White and preserve Decaf. No additional
+reboot/failure/log-injection suite or soak is required for that version alignment.
+See [runtime validation and current nodes](selectable-runtime-validation.md) for
+current identities, evidence and cleanup.

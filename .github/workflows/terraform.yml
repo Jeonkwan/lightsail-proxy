@@ -48,12 +48,12 @@ jobs:
           terraform_wrapper: false
 
       - name: Terraform init
-        run: terraform init -backend=false
+        run: terraform init -backend=false -input=false -lockfile=readonly
 
       - name: Terraform validate
         run: terraform validate
 
-      - name: Validate bootstrap first boot, resume and reboot guard
+      - name: Validate runtime-neutral bootstrap, retention and reboot guard
         run: python3 scripts/tests/test_proxy_bootstrap.py
 
       - name: Reject unsafe native replacement plans

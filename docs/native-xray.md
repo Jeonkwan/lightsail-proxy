@@ -1,5 +1,7 @@
 # Native Xray deployment
 
+For selectable native/Docker deployment, switching and the spare-validation plan, see [selectable runtime](selectable-xray-runtime.md).
+
 The managed basic Ubuntu VM needs SSH, Python3 and CA certificates already present
 on normal blueprints. Missing requirements are installed conditionally. Ansible,
 archive downloads, checksum verification, extraction and test clients run on the
@@ -38,12 +40,13 @@ Terraform operations support Cream/Flat White in zone A and Decaf in zone C.
 They validate exact target identity and resource scope, preserve
 other instances, and guard instance-only replacement so static IP/key/DNS remain.
 Destruction removes owned snapshots, an empty workspace and parks retired DNS.
-Both product PRs remain draft until explicitly approved for merge.
+The native migration PRs were originally drafts; subsequent merge and production
+status is recorded in [selectable validation](selectable-runtime-validation.md).
 
 Guarded operations live in `.github/workflows/native-infrastructure.yml`; the
 normal `terraform-deploy.yml` retains its existing inputs and deployment behavior.
 GitHub requires a workflow to be registered on the default branch for manual
 dispatch. During this draft's live validation, the guarded definition temporarily
 used the already registered `terraform-deploy.yml` filename, which was restored
-after cleanup. The separate native workflow needs registration before future
-manual dispatch. See [validation evidence](native-xray-validation.md).
+after cleanup. The separate native workflow becomes registered after this PR chain reaches
+main; before that, the registered selected-host path is available. See [validation evidence](native-xray-validation.md).
