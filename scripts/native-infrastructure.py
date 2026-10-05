@@ -21,6 +21,7 @@ def main():
   if target in workspaces:
    tf('workspace','select',target);print('Selected state addresses:',call('terraform','state','list'))
   print('Static IPs:',json.dumps(aws('get-static-ips')['staticIps']))
+  print('Key pair names:',json.dumps([x['name'] for x in aws('get-key-pairs')['keyPairs']]))
   print('Snapshots:',json.dumps([{'name':x['name'],'fromInstanceName':x.get('fromInstanceName')} for x in aws('get-instance-snapshots')['instanceSnapshots']]))
   return
  if op=='create':
