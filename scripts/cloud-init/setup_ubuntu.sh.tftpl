@@ -27,7 +27,7 @@ fi
 
 # Bound host logs without scheduling routine restarts.
 mkdir -p /etc/systemd/journald.conf.d
-cat <<'EOF' > /etc/systemd/journald.conf.d/50-proxy-retention.conf
+cat <<'EOF' > /etc/systemd/journald.conf.d/zz-proxy-retention.conf
 [Journal]
 SystemMaxUse=100M
 RuntimeMaxUse=32M
@@ -36,7 +36,7 @@ MaxRetentionSec=7day
 Storage=persistent
 ForwardToSyslog=no
 EOF
-chmod 644 /etc/systemd/journald.conf.d/50-proxy-retention.conf
+chmod 644 /etc/systemd/journald.conf.d/zz-proxy-retention.conf
 systemctl restart systemd-journald
 
 # Disposable hosts receive updates through replacement, not background maintenance.
@@ -225,7 +225,7 @@ case "$PROXY_SOLUTION" in
             --docker-user "$USERNAME"
         ;;
     basic-vm)
-        echo "Basic VM mode active. Packages installed, skipping proxy deployment."
+        echo "Basic VM requirements ready; skipping proxy deployment."
         ;;
     *)
         echo "Unsupported proxy_solution: $${PROXY_SOLUTION}" >&2
