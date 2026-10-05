@@ -42,7 +42,8 @@ for case in ('first','resume','failed'):
    assert 'WantedBy=multi-user.target' not in unit
   elif case=='resume':
    assert r.returncode==0,r.stderr
-   assert 'shutdown' not in lines and 'apt-get update' in lines
+   assert 'shutdown' not in lines and 'apt-get' not in lines
+   assert 'gpg' not in lines and 'lsb-release' not in lines
    assert 'python3-pip' not in lines and 'ansible' not in lines
    assert (boot/'complete').exists()
   else:

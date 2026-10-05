@@ -211,3 +211,10 @@ This fresh-instance bootstrap does not remove jobs on existing hosts. Proxy
 container logging is configured by the separate proxy deployment repository.
 
 See [disposable proxy VM strategy](docs/disposable-proxy-vms.md) for replacement-based updates, boot readiness and validation.
+
+## Native Xray feature
+
+`feature/native-xray` builds on `feature/bounded-logs`. Native runtime installation
+uses runner-verified official release binaries and systemd, with persistent bounded
+journald logs. See [native deployment](docs/native-xray.md). Existing container roles
+are legacy code and are not invoked by the native playbook.

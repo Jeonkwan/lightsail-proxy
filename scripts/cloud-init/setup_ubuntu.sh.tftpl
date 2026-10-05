@@ -31,6 +31,10 @@ cat <<'EOF' > /etc/systemd/journald.conf.d/50-proxy-retention.conf
 [Journal]
 SystemMaxUse=100M
 RuntimeMaxUse=32M
+SystemMaxFileSize=10M
+MaxRetentionSec=7day
+Storage=persistent
+ForwardToSyslog=no
 EOF
 chmod 644 /etc/systemd/journald.conf.d/50-proxy-retention.conf
 systemctl restart systemd-journald
@@ -136,13 +140,25 @@ for unit in fwupd-refresh.timer update-notifier-download.timer update-notifier-m
 done
 
 export DEBIAN_FRONTEND="noninteractive"
-wait_for_apt
-retry 5 10 apt-get update
-wait_for_apt
 if [ "$PROXY_SOLUTION" = basic-vm ]; then
-    retry 5 10 apt-get install --no-install-recommends -y \
-        ca-certificates curl python3 gpg lsb-release
+    # Remote Ansible needs Python, not a local Ansible installation. Native Xray
+    # and release downloads are supplied by the control host.
+    missing=""
+    for package in ca-certificates python3; do
+        if ! dpkg-query -W -f='$${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed'; then
+            missing="$missing $package"
+        fi
+    done
+    if [ -n "$missing" ]; then
+        wait_for_apt
+        retry 5 10 apt-get update
+        wait_for_apt
+        retry 5 10 apt-get install --no-install-recommends -y $missing
+    fi
 else
+    wait_for_apt
+    retry 5 10 apt-get update
+    wait_for_apt
     # Legacy solutions still execute their playbooks locally.
     retry 5 10 apt-get install --no-install-recommends -y \
         ca-certificates curl python3 python3-pip python3-venv gpg gpg-agent cron git
