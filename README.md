@@ -1,5 +1,7 @@
 # lightsail-proxy
 
+For agents and contributors: start with [development environment and dependencies](docs/development.md) and [AGENTS.md](AGENTS.md).
+
 🚀 Deploy a ready-to-use proxy host on AWS Lightsail with a single script.
 
 This project provisions and maintains a Lightsail instance, associates a static IP, uploads your SSH key, and opens the required ports so you can jump straight into configuring your proxy stack.
