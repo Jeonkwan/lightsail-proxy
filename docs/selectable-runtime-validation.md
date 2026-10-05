@@ -111,3 +111,20 @@ Capture the created instance/IP from the guarded create run, never infer it from
 serving-node state file. Record sanitized acceptance/cleanup run links and recheck
 serving clients after cleanup. Temporary test names do not create DNS resources;
 existing Americano/Latte mokamaker.site DNS is preserved.
+
+## Docker 26.3.27 alignment and Cream replacement
+
+The subsequent owner instruction selects a new Cream for Docker-only deployment and
+supplied authenticated sing-box/mihomo connection validation. Keep Cream if accepted,
+then retire exact Flat White and clean its owned resources/DNS; preserve Decaf. Merge
+this feature's existing PR chain after success, without new releases. This overrides
+the previous spare-only scope for this task. Live results will be recorded here.
+
+Controller validation of official `ghcr.io/xtls/xray-core:26.3.27` confirmed version,
+ENTRYPOINT `/usr/local/bin/xray`, UID 65532 and actual config permission acceptance
+(root:65532 0640 accepted; root 0600 rejected). Registry digest:
+`sha256:592ec4d11f656db95598d01e76dbcc6e002d67360b96a5436500a938230f52c7`;
+Linux/amd64 image ID:
+`sha256:695c08e5627556d1286f43ae3aeb370679d27b969ba0d5bb3dfe288746a5dde9`.
+Both deployment defaults now use 26.3.27, with separate version fields and explicit
+reviewed 25.10.15 rollback options. Historical results above remain for Docker 25.10.15.

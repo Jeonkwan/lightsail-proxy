@@ -13,7 +13,7 @@ This project provisions and maintains a Lightsail instance, associates a static 
 Use `proxy_solution=basic-vm` for this runtime path. Infrastructure provisions the
 host and completes its controlled bootstrap reboot; the sibling proxy repository
 then runs Ansible from the controller with `xray_deployment_mode=native|docker`.
-Native 26.3.27 is the default; Docker uses official image 25.10.15. Basic bootstrap
+Native 26.3.27 is the default; Docker uses official image 26.3.27. Basic bootstrap
 installs neither Docker nor server-side Ansible. Runtime files live at
 `/usr/local/etc/xray` (native) or `/opt/xray` (Docker).
 

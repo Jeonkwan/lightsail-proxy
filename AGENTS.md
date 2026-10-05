@@ -17,7 +17,7 @@ for merge. Keep the development guide synchronized when dependencies change.
 For selectable runtime work, read [runtime contract](docs/selectable-xray-runtime.md)
 and [spare validation](docs/selectable-runtime-validation.md) before changing
 runtime selection, diagnostics or Actions. Keep native 26.3.27 / reviewed 25.10.15
-and Docker 25.10.15 pinned; verify candidates before switching, scope cleanup by
+and Docker 26.3.27 (explicit reviewed 25.10.15 rollback) pinned; verify candidates before switching, scope cleanup by
 ownership, and preserve unchanged runtimes. Agent and human runbooks must stay in sync.
 
 On 2026-10-05 the owner-selected Americano and Latte validation completed; both
@@ -28,3 +28,13 @@ empty workspace cleanup. Keep existing DNS endpoints unless explicitly selected 
 repointing. Credentials stay in GitHub Actions. This authorization is task-specific,
 not standing permission for future cloud mutations. Merge/releases still require
 separate owner instructions.
+
+The owner subsequently authorized Docker-only 26.3.27 validation on a new Cream.
+Acceptance is successful deployment and authenticated supplied sing-box/mihomo
+connections against IP and hostname; no additional lifecycle/soak suite is required
+for this version alignment. If accepted, keep Cream, destroy only the exact recorded
+Flat White instance and its owned IP/key/snapshots/workspace, and park its DNS.
+Preserve Decaf and shared credentials/backends. Merge this task's PR chain after
+validation; do not publish releases. This supersedes the previous task's scope,
+not standing authorization for later operations. Record final identities and evidence
+in docs/selectable-runtime-validation.md and keep human/agent instructions aligned.

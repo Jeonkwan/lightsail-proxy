@@ -63,11 +63,12 @@ class ReplacementGuards(unittest.TestCase):
     def test_reject_wrong_workspace_owner(self): self.exercise('workspace')
 
 class SpareGuards(unittest.TestCase):
-    def exercise_destroy(self, unsafe=None):
-        target='americano';prefix='lightsail-singapore-a-'+target
+    def exercise_destroy(self, unsafe=None, target="americano"):
+        spare_only=target in module.SPARE_TARGETS
+        prefix='lightsail-singapore-a-'+target
         owned=prefix+'-owned'
         selected={'name':owned,'publicIpAddress':'192.0.2.2','location':{'availabilityZone':'ap-southeast-1a'}}
-        peer={'name':PEER,'publicIpAddress':'192.0.2.1'}
+        peer={'name':'lightsail-singapore-c-decaf-peer' if target=='flatwhite' else PEER,'publicIpAddress':'192.0.2.1'}
         inventories=iter([[selected,peer],[peer]])
         state={'resources':[{'type':'aws_lightsail_instance','instances':[{'attributes':{'name':PEER if unsafe=='workspace' else owned}}]}]}
         plan={'resource_changes':[{'address':'aws_lightsail_instance.lightsail_instance','type':'aws_lightsail_instance','change':{'actions':['delete'],'before':{'name':owned},'after':None}}, {'address':'aws_lightsail_static_ip.instance_ip','type':'aws_lightsail_static_ip','change':{'actions':['delete'],'before':{'name':prefix+'-ip'},'after':None}}]}
@@ -84,8 +85,9 @@ class SpareGuards(unittest.TestCase):
             if args==('terraform','state','list'):return ''
             if args[:3]==('terraform','show','-json'):return json.dumps(plan)
             raise AssertionError(args)
-        env={'TARGET':target,'OPERATION':'destroy','SPARE_ONLY':'true','EXPECTED_INSTANCE':PEER if unsafe=='identity' else owned,'TF_BACKEND_BUCKET':'test','TF_BACKEND_KEY':'test','TF_BACKEND_REGION':'ap-southeast-1','RUNNER_TEMP':'/tmp'}
-        with patch.dict(os.environ,env,clear=True),patch.object(module,'aws',aws),patch.object(module,'call',call),patch.object(module,'tf') as tf,contextlib.redirect_stdout(io.StringIO()):
+        env={'TARGET':target,'OPERATION':'destroy','SPARE_ONLY':str(spare_only).lower(),'TF_VAR_namecheap_ddns_password':'fake','EXPECTED_INSTANCE':PEER if unsafe=='identity' else owned,'TF_BACKEND_BUCKET':'test','TF_BACKEND_KEY':'test','TF_BACKEND_REGION':'ap-southeast-1','RUNNER_TEMP':'/tmp'}
+        with patch.dict(os.environ,env,clear=True),patch.object(module,'aws',aws),patch.object(module,'call',call),patch.object(module,'tf') as tf,patch('urllib.request.urlopen') as dns,contextlib.redirect_stdout(io.StringIO()):
+            dns.return_value.__enter__.return_value.read.return_value=b'<ErrCount>0</ErrCount>'
             if unsafe:
                 with self.assertRaises(AssertionError):module.main()
                 self.assertFalse(any(c.args[0]=='apply' for c in tf.call_args_list))
@@ -93,6 +95,13 @@ class SpareGuards(unittest.TestCase):
                 module.main()
                 self.assertTrue(any(c.args[0]=='apply' for c in tf.call_args_list))
                 self.assertIn(('workspace','delete',target),[c.args for c in tf.call_args_list])
+                self.assertEqual(dns.called,not spare_only)
+
+    def test_selected_flatwhite_retirement_cleans_owned_resources_and_parks_dns(self):
+        self.exercise_destroy(target='flatwhite')
+
+    def test_selected_flatwhite_retirement_rejects_unrelated_plan(self):
+        self.exercise_destroy('plan',target='flatwhite')
 
     def test_destroy_removes_only_owned_spare_and_empty_workspace(self):self.exercise_destroy()
     def test_destroy_rejects_wrong_identity_before_apply(self):self.exercise_destroy('identity')
@@ -108,7 +117,7 @@ class SpareGuards(unittest.TestCase):
         for target,zone in [('americano','a'),('latte','c')]:
             with self.subTest(target=target):
                 prefix='lightsail-singapore-'+zone+'-'+target
-                peer={'name':PEER,'publicIpAddress':'192.0.2.1'}
+                peer={'name':'lightsail-singapore-c-decaf-peer' if target=='flatwhite' else PEER,'publicIpAddress':'192.0.2.1'}
                 spare={'name':prefix+'-new','publicIpAddress':'192.0.2.2'}
                 inventories=iter([[peer],[peer,spare]])
                 plan={'resource_changes':[{'address':'aws_lightsail_instance.lightsail_instance','type':'aws_lightsail_instance','change':{'actions':['create'],'before':None,'after':{'availability_zone':'ap-southeast-1'+zone,'blueprint_id':'ubuntu_24_04'}}}]}

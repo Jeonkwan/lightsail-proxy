@@ -6,14 +6,19 @@ not Terraform/bootstrap. Basic provisioning stays minimal for either runtime and
 performs its one controlled reboot before marking bootstrap ready. Proxy deployment
 never installs Ansible on the VM or schedules a reboot.
 
+Both runtime defaults are now 26.3.27. Docker 25.10.15 remains an explicit reviewed
+rollback (`-e xray_container_image_version=25.10.15` / Actions
+`container_image_version=25.10.15`); diagnostics must select that same version.
+The version fields remain separate so a native rollback does not silently change Docker.
+
 ## Defaults and contract
 
 | Setting | Native | Docker |
 | --- | --- | --- |
 | `xray_deployment_mode` / Actions `deployment_mode` | `native` (default) | `docker` |
-| Version | `xray_binary_version=26.3.27`; reviewed `25.10.15` available | `xray_container_image_version=25.10.15` |
-| Actions version input | `xray_version=26.3.27` (native binary only) | `container_image_version=25.10.15` |
-| Runtime | verified official archive binary, dedicated unprivileged `xray` account | official `ghcr.io/xtls/xray-core:25.10.15`, Compose |
+| Version | `xray_binary_version=26.3.27`; reviewed `25.10.15` available | `xray_container_image_version=26.3.27` |
+| Actions version input | `xray_version=26.3.27` (native binary only) | `container_image_version=26.3.27` |
+| Runtime | verified official archive binary, dedicated unprivileged `xray` account | official `ghcr.io/xtls/xray-core:26.3.27`, Compose |
 | Config | `/usr/local/etc/xray/config.json`, root:xray 0640 | `/opt/xray/config/config.json`, root:65532 0640 |
 | Runtime files | `/usr/local/bin/xray`, `/etc/systemd/system/xray.service` | `/opt/xray/docker-compose.yml`; Compose project/service `xray` |
 | Logs | journald; no text logs/logrotate | json-file, 10 MB × three files |
@@ -46,7 +51,7 @@ optional `XRAY_SNI` already supplied securely:
 ansible-playbook -i /path/to/inventory.yml ansible/site.yml \
   -e xray_deployment_mode=native -e xray_binary_version=26.3.27
 ansible-playbook -i /path/to/inventory.yml ansible/site.yml \
-  -e xray_deployment_mode=docker -e xray_container_image_version=25.10.15
+  -e xray_deployment_mode=docker -e xray_container_image_version=26.3.27
 ```
 
 `XRAY_DEPLOYMENT_MODE` is the environment equivalent; `-e` takes precedence. Native
@@ -66,7 +71,7 @@ gh workflow run deploy.yml --repo Jeonkwan/less-vision-reality \
 gh workflow run deploy.yml --repo Jeonkwan/less-vision-reality \
   --ref feature/selectable-xray-runtime \
   -f environment=YOUR_ENVIRONMENT -f remote_server_ip_address=SPARE_IP \
-  -f remote_server_user=ubuntu -f deployment_mode=docker -f container_image_version=25.10.15
+  -f remote_server_user=ubuntu -f deployment_mode=docker -f container_image_version=26.3.27
 ```
 
 The reusable workflow exposes the same selection as a string and rejects invalid
@@ -159,12 +164,12 @@ only labels/addresses changed; other spare names need reviewed profile/target su
 Local checks execute selector dispatch and reject invalid modes before host operations,
 exercise ownership rejection, verify archive corruption rejection, and validate the
 shared config with both reviewed official binaries. CI checks both modes and exercises
-config permissions against the actual pinned nonroot Docker image. Live acceptance
-uses only the owner-selected Americano and Latte spares; see the separate
+config permissions against the actual pinned nonroot Docker image. Historical two-mode acceptance
+used the owner-selected Americano and Latte spares; see the separate
 [validation record and commands](selectable-runtime-validation.md) for current status.
 Previous native-only evidence cannot establish selectable-runtime correctness.
 
-## Spare-instance acceptance and cleanup
+## Historical Americano/Latte acceptance and cleanup
 
 For a future run, obtain a selected disposable target and mutation/cleanup scope first.
 The current owner selected Americano (zone A) and Latte (zone C), including destruction
@@ -200,3 +205,31 @@ logged; persistent network, HTTP or configuration failures fail validation.
 
 Runner client success covers supplied proxy transport, not complete iOS TUN/DNS or
 a mobile ISP path. No credential values, state or unfiltered logs belong in evidence.
+
+## Cream replacement acceptance
+
+The owner selected a fresh Cream for Docker-only 26.3.27 deployment and authenticated
+sing-box/mihomo IP and hostname checks. Keep Cream on success, retire exact Flat White
+and all owned resources, park `flatwhite.mokamaker.site`, and preserve Decaf. No new
+reboot/failure/log-injection suite or monitoring delay is required for this follow-up.
+The earlier two-mode suite above remains historical evidence for 25.10.15 Docker.
+
+Before default-branch registration of `native-infrastructure.yml`, use the registered
+selected-host path without overwriting normal workflow behavior:
+
+```bash
+gh workflow run terraform-deploy.yml --repo Jeonkwan/lightsail-proxy \
+  --ref feature/selectable-xray-runtime -f workspace=cream -f tf_action=plan \
+  -f instance_operation=inspect -f instance_target=cream
+# After inspection confirms no Cream resources, change inspect to create.
+# After Cream acceptance, retire only the recorded Flat White identity:
+gh workflow run terraform-deploy.yml --repo Jeonkwan/lightsail-proxy \
+  --ref feature/selectable-xray-runtime -f workspace=flatwhite -f tf_action=plan \
+  -f instance_operation=destroy -f instance_target=flatwhite \
+  -f expected_instance=EXACT_RECORDED_FLATWHITE_INSTANCE
+```
+
+Choose exactly one optional operation path. It checks isolated workspace ownership,
+plan scope and peer identities; destruction requires an exact instance name. Credentials
+remain in Actions. After merge, use `--ref main` and the registered infrastructure
+workflow as appropriate. See the validation record for current production identities.
