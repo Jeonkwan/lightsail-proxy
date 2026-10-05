@@ -14,7 +14,7 @@ never installs Ansible on the VM or schedules a reboot.
 | Version | `xray_binary_version=26.3.27`; reviewed `25.10.15` available | `xray_container_image_version=25.10.15` |
 | Actions version input | `xray_version=26.3.27` (native binary only) | `container_image_version=25.10.15` |
 | Runtime | verified official archive binary, dedicated unprivileged `xray` account | official `ghcr.io/xtls/xray-core:25.10.15`, Compose |
-| Config | `/usr/local/etc/xray/config.json`, root:xray 0640 | `/opt/xray/config/config.json`, root:root 0600 |
+| Config | `/usr/local/etc/xray/config.json`, root:xray 0640 | `/opt/xray/config/config.json`, root:65532 0640 |
 | Runtime files | `/usr/local/bin/xray`, `/etc/systemd/system/xray.service` | `/opt/xray/docker-compose.yml`; Compose project/service `xray` |
 | Logs | journald; no text logs/logrotate | json-file, 10 MB × three files |
 
@@ -100,6 +100,10 @@ ansible-playbook -i /path/to/inventory.yml ansible/site.yml --limit spare \
   -e xray_deployment_mode=native -e xray_binary_version=25.10.15
 ```
 
+The pinned Docker image runs as UID/GID 65532. Its bind-mounted config directory
+is root:65532 0750 and config/candidate files are root:65532 0640; no host account
+is installed for that numeric identity. Compose remains root-only.
+
 Docker validates the candidate in an isolated temporary container with no network
 or published ports, then validates Compose. Native validates the candidate binary
 and config pair. Only afterward does deployment stop the verified opposite runtime:
@@ -146,38 +150,45 @@ inspection allows inactive retained Docker artifacts after a switch but rejects 
 running managed Docker peer. Docker inspection requires the pinned running image,
 bounded json-file logs and disabled/stopped native unit. Baselines compare boot plus
 native PID/start/restarts or Docker ID/PID/start/restarts. Mutation stages still
-require the selected hostname to resolve to the expected IP. Existing profile
-names/fingerprints remain cream/flatwhite/decaf; adding a different spare name needs
-reviewed sanitized profile/target support before live validation.
+require the selected hostname to resolve to the expected IP. Existing cream/flatwhite/decaf profiles and fingerprints remain unchanged. Americano
+and Latte add sanitized copies of the supplied compatible transport settings, with
+only labels/addresses changed; other spare names need reviewed profile/target support.
 
 Local checks execute selector dispatch and reject invalid modes before host operations,
 exercise ownership rejection, verify archive corruption rejection, and validate the
-shared config with both reviewed official binaries. CI syntax-checks both modes.
-These checks do not prove Docker Engine behavior or authenticated transport on a VM.
-This refactor has **not been live validated**. Previous native validation evidence
-belongs to the native branch and cannot establish selectable-runtime correctness.
+shared config with both reviewed official binaries. CI checks both modes and exercises
+config permissions against the actual pinned nonroot Docker image. Live acceptance
+uses only the owner-selected Americano and Latte spares; see the separate
+[validation record and commands](selectable-runtime-validation.md) for current status.
+Previous native-only evidence cannot establish selectable-runtime correctness.
 
-## Proposed spare-instance validation (requires selected target and authorization)
+## Spare-instance acceptance and cleanup
 
-1. Select a disposable hostname/profile, zone, expected peer identities and credential
-   environment. Use an isolated Terraform workspace and review a plan containing only
-   spare resources. Do not replace Flat White or Decaf or reuse their state.
+For a future run, obtain a selected disposable target and mutation/cleanup scope first.
+The current owner selected Americano (zone A) and Latte (zone C), including destruction
+after validation. This task-specific authorization does not extend to serving peers.
+
+1. Use isolated Terraform workspaces and the guarded registered spare workflow. It
+   checks ownership and a plan containing only selected resources. Preserve existing
+   Namecheap DNS and use temporary `name.IP.sslip.io` names bound to the recorded IP.
 2. Provision basic-vm, wait for completed bootstrap and active `kho=off`; record
-   instance/IP/kernel/boot and verify serving peers with existing Actions clients.
-3. On a fresh spare, deploy native 26.3.27 and run inspection with minimal-host
-   assertion. Validate sing-box 1.11.4 and mihomo 1.19.32 against IP and hostname.
-4. Save baseline, redeploy unchanged, compare process/boot; inject invalid config and
-   confirm rejection plus unchanged baseline/client success. Test SIGKILL recovery,
-   authorized reboot recovery and actual journal rotation. Recheck peers.
-5. Recreate only the disposable spare for a fresh Docker test. Deploy pinned 25.10.15;
-   repeat both clients, baseline/redeploy, invalid candidate, failure/reboot recovery
-   and actual json-file rotation. Verify host journals/maintenance and peers.
-6. On the spare, test Docker -> native -> Docker with explicit opt-in and rollback.
-   Confirm only the selected runtime serves/restarts at boot; record inactive artifacts,
-   config ownership and unrelated-container/network preservation. Test refusal without
-   switch opt-in and refusal for unrelated same-name resources/port listeners.
-7. Record sanitized run links and runtime/binary/image digest evidence. Promotion,
-   serving-node deployment, spare cleanup, merge and releases remain separate decisions.
+   instance/IP/kernel/boot and check Flat White/Decaf with read-only Actions clients.
+3. Start Americano fresh with native 26.3.27 and prove Docker absent. Start Latte fresh
+   with pinned Docker 25.10.15. On each host authenticate sing-box 1.11.4 and mihomo
+   1.19.32 against both IP and temporary hostname using the supplied transport profile.
+4. Record a baseline; unchanged redeployment, invalid mode and invalid candidate must
+   preserve runtime/boot and clients. Test SIGKILL recovery, reboot and actual bounded
+   journal or Docker json-file rotation. Native still checks host journal retention;
+   Docker checks both host journals and its own logs.
+5. Refuse switching without opt-in, then switch to the opposite runtime, repeat the
+   lifecycle suite and roll back. Preserve an unrelated container/network/config
+   fixture across switches and reboots, then remove only the harness-created fixture.
+   Ambiguous ownership and unrelated-listener guards also have local coverage.
+6. Recheck serving peers, destroy each exact recorded spare identity and confirm
+   instance/static IP/key/snapshots and empty workspace removal. Record sanitized
+   acceptance and teardown run links. Never leave spares running to await merge.
+
+Merge, releases and serving-node deployment require separate owner instructions.
 
 Runner client success covers supplied proxy transport, not complete iOS TUN/DNS or
 a mobile ISP path. No credential values, state or unfiltered logs belong in evidence.

@@ -25,6 +25,30 @@ candidate rejection, recovery/reboot/log retention, switching/rollback, and peer
 clients. Individual mutation stages require hostname/IP binding. A fresh native host
 must additionally prove Docker absent; switched native hosts retain inactive packages.
 
-Status: preparation in progress; no successful live-validation claim yet. Evidence
-and exact resource cleanup results will be added after execution. Run commands and
+Status: live acceptance is running on the two selected spares. Final acceptance
+and exact resource cleanup results will be recorded after execution. Run commands and
 runtime limitations remain in [runtime contract](selectable-xray-runtime.md).
+
+## Exact spare commands
+
+```bash
+# Registered infrastructure path; existing normal inputs still work unchanged.
+gh workflow run terraform-deploy.yml --repo Jeonkwan/lightsail-proxy \
+  --ref feature/selectable-xray-runtime -f workspace=americano \
+  -f spare_operation=create -f spare_target=americano
+# Repeat with workspace/target latte (zone C).
+gh workflow run diagnose.yml --repo Jeonkwan/less-vision-reality \
+  --ref feature/selectable-xray-runtime -f environment=flatwhite \
+  -f target=americano -f stage=validate-spare -f deployment_mode=native \
+  -f address=SPARE_IP -f validation_hostname=americano.SPARE_IP.sslip.io
+# Latte starts with deployment_mode=docker. Use your selected credential environment.
+gh workflow run terraform-deploy.yml --repo Jeonkwan/lightsail-proxy \
+  --ref feature/selectable-xray-runtime -f workspace=americano \
+  -f spare_operation=destroy -f spare_target=americano \
+  -f expected_instance=EXACT_RECORDED_INSTANCE_NAME
+```
+
+Capture the created instance/IP from the guarded create run, never infer it from a
+serving-node state file. Record sanitized acceptance/cleanup run links and recheck
+serving clients after cleanup. Temporary test names do not create DNS resources;
+existing Americano/Latte mokamaker.site DNS is preserved.

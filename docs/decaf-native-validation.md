@@ -1,5 +1,9 @@
 # Decaf native replacement — 2026-10-05
 
+Historical native-only evidence. For selectable native/Docker deployment, use the
+[runtime contract](selectable-xray-runtime.md) and
+[spare acceptance record](selectable-runtime-validation.md).
+
 The owner authorized replacing Decaf after the initial Cream/Flat White native
 migration. Flat White remained serving throughout. Existing release tags were
 not moved; proxy deployments used the annotated `v2.1.0-native-xray` tag.

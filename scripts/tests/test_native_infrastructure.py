@@ -63,6 +63,42 @@ class ReplacementGuards(unittest.TestCase):
     def test_reject_wrong_workspace_owner(self): self.exercise('workspace')
 
 class SpareGuards(unittest.TestCase):
+    def exercise_destroy(self, unsafe=None):
+        target='americano';prefix='lightsail-singapore-a-'+target
+        owned=prefix+'-owned'
+        selected={'name':owned,'publicIpAddress':'192.0.2.2','location':{'availabilityZone':'ap-southeast-1a'}}
+        peer={'name':PEER,'publicIpAddress':'192.0.2.1'}
+        inventories=iter([[selected,peer],[peer]])
+        state={'resources':[{'type':'aws_lightsail_instance','instances':[{'attributes':{'name':PEER if unsafe=='workspace' else owned}}]}]}
+        plan={'resource_changes':[{'address':'aws_lightsail_instance.lightsail_instance','type':'aws_lightsail_instance','change':{'actions':['delete'],'before':{'name':owned},'after':None}}, {'address':'aws_lightsail_static_ip.instance_ip','type':'aws_lightsail_static_ip','change':{'actions':['delete'],'before':{'name':prefix+'-ip'},'after':None}}]}
+        if unsafe=='plan':plan['resource_changes'][1]['change']['before']['name']='unrelated-ip'
+        def aws(*args):
+            if args==('get-instances',):return {'instances':next(inventories)}
+            if args==('get-static-ips',):return {'staticIps':[]}
+            if args==('get-key-pairs',):return {'keyPairs':[]}
+            if args==('get-instance-snapshots',):return {'instanceSnapshots':[]}
+            raise AssertionError(args)
+        def call(*args):
+            if args==('terraform','workspace','list'):return 'default americano flatwhite decaf'
+            if args==('terraform','state','pull'):return json.dumps(state)
+            if args==('terraform','state','list'):return ''
+            if args[:3]==('terraform','show','-json'):return json.dumps(plan)
+            raise AssertionError(args)
+        env={'TARGET':target,'OPERATION':'destroy','SPARE_ONLY':'true','EXPECTED_INSTANCE':PEER if unsafe=='identity' else owned,'TF_BACKEND_BUCKET':'test','TF_BACKEND_KEY':'test','TF_BACKEND_REGION':'ap-southeast-1','RUNNER_TEMP':'/tmp'}
+        with patch.dict(os.environ,env,clear=True),patch.object(module,'aws',aws),patch.object(module,'call',call),patch.object(module,'tf') as tf,contextlib.redirect_stdout(io.StringIO()):
+            if unsafe:
+                with self.assertRaises(AssertionError):module.main()
+                self.assertFalse(any(c.args[0]=='apply' for c in tf.call_args_list))
+            else:
+                module.main()
+                self.assertTrue(any(c.args[0]=='apply' for c in tf.call_args_list))
+                self.assertIn(('workspace','delete',target),[c.args for c in tf.call_args_list])
+
+    def test_destroy_removes_only_owned_spare_and_empty_workspace(self):self.exercise_destroy()
+    def test_destroy_rejects_wrong_identity_before_apply(self):self.exercise_destroy('identity')
+    def test_destroy_rejects_wrong_workspace_before_apply(self):self.exercise_destroy('workspace')
+    def test_destroy_rejects_unrelated_static_ip_before_apply(self):self.exercise_destroy('plan')
+
     def test_spare_workflow_rejects_serving_targets_before_aws(self):
         with patch.dict(os.environ, {'TARGET':'flatwhite','OPERATION':'destroy','SPARE_ONLY':'true'}, clear=True), patch.object(module,'aws') as aws:
             with self.assertRaisesRegex(AssertionError,'serving target'): module.main()

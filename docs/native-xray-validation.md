@@ -1,5 +1,9 @@
 # Native Xray validation — 2026-10-05
 
+Historical native-only evidence. For selectable native/Docker deployment, use the
+[runtime contract](selectable-xray-runtime.md) and
+[spare acceptance record](selectable-runtime-validation.md).
+
 Both repositories use `feature/native-xray`, based on `feature/bounded-logs`.
 For the subsequent Decaf replacement, see [Decaf native validation](decaf-native-validation.md).
 Product PRs remain draft and unmerged. The owner authorized fresh Cream testing,
