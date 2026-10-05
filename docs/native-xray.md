@@ -1,5 +1,7 @@
 # Native Xray deployment
 
+For selectable native/Docker deployment, switching and the spare-validation plan, see [selectable runtime](selectable-xray-runtime.md).
+
 The managed basic Ubuntu VM needs SSH, Python3 and CA certificates already present
 on normal blueprints. Missing requirements are installed conditionally. Ansible,
 archive downloads, checksum verification, extraction and test clients run on the

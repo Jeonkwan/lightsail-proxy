@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile,subprocess,os,json
 root=Path(__file__).resolve().parents[2]
 values={name:"" for name in ["username","domain_name","subdomain_name","public_ip","namecheap_ddns_password","proxy_server_uuid","playbook_branch","proxy_solution","proxy_contact_email","less_vision_reality_short_ids","less_vision_reality_private_key","less_vision_reality_public_key","less_vision_reality_decoy_domain"]}
-values.update(username="ubuntu",proxy_solution="basic-vm",playbook_branch="feature/bounded-logs")
+values.update(username="ubuntu",proxy_solution="basic-vm",playbook_branch="feature/selectable-xray-runtime")
 expression="templatefile("+json.dumps(str(root/"scripts/cloud-init/setup_ubuntu.sh.tftpl"))+", jsondecode("+json.dumps(json.dumps(values))+"))\n"
 with tempfile.TemporaryDirectory() as console_dir:
  rendered=subprocess.check_output(["terraform","console"],input=expression,text=True,cwd=console_dir).strip()
@@ -50,6 +50,11 @@ for case in ('first','resume','resume_missing','failed'):
    else:assert 'apt-get' not in lines
    assert 'gpg' not in lines and 'lsb-release' not in lines
    assert 'python3-pip' not in lines and 'ansible' not in lines
+   assert 'docker' not in lines and 'compose' not in lines and 'curl' not in lines
+   retention=(root/'etc/systemd/journald.conf.d/zz-proxy-retention.conf').read_text()
+   for setting in ['Storage=persistent','SystemMaxUse=100M','RuntimeMaxUse=32M',
+                   'SystemMaxFileSize=10M','MaxRetentionSec=7day','ForwardToSyslog=no']:
+    assert setting in retention,setting
    assert (boot/'complete').exists()
   else:
    assert r.returncode!=0 and 'refusing a reboot loop' in r.stderr

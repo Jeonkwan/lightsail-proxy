@@ -1,5 +1,7 @@
 # Development environment
 
+For selectable native/Docker deployment, switching and the spare-validation plan, see [selectable runtime](selectable-xray-runtime.md).
+
 Use a Linux workstation or CI runner with Bash, Git, curl, OpenSSH client and
 Python 3.12 (including venv/pip). Install tools on the control host, not on the
 512 MB proxy VM. macOS can be used with equivalent tools; the documented checks
@@ -34,7 +36,7 @@ terraform version
 gh --version
 ```
 
-The current playbook uses `ansible.builtin` modules and deploys a checksum-verified native Xray binary under systemd. No extra Ansible Galaxy collection or Python Docker SDK is
+The selectable playbook uses `ansible.builtin` modules for native systemd or Docker Compose deployment. Native remains the default. No extra Ansible Galaxy collection or Python Docker SDK is
 required for this deployment. Python's standard library suffices for the
 bootstrap tests and diagnostic script. Do not install unrelated packages by default.
 
@@ -46,7 +48,7 @@ workspace-specific and is not part of a fresh repository clone.
 
 Clone `Jeonkwan/lightsail-proxy` (Terraform and OS bootstrap) and
 `Jeonkwan/less-vision-reality` (Ansible and Xray) as sibling directories. Changes
-currently use `feature/native-xray` in both repositories. Check remote branch
+currently use `feature/selectable-xray-runtime` in both repositories. Check remote branch
 availability before checkout; do not assume it remains the development branch
 forever. `Jeonkwan/gcp-proxy` is a separate optional infrastructure project;
 GCP credentials and tooling are not prerequisites for this Lightsail work.
@@ -56,8 +58,8 @@ mkdir -p proxy-workspace
 cd proxy-workspace
 gh repo clone Jeonkwan/lightsail-proxy
 gh repo clone Jeonkwan/less-vision-reality
-git -C lightsail-proxy switch feature/native-xray
-git -C less-vision-reality switch feature/native-xray
+git -C lightsail-proxy switch feature/selectable-xray-runtime
+git -C less-vision-reality switch feature/selectable-xray-runtime
 ```
 
 ## Authentication and configuration

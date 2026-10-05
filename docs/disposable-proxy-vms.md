@@ -1,5 +1,7 @@
 # Disposable proxy VM strategy
 
+For selectable native/Docker deployment, switching and the spare-validation plan, see [selectable runtime](selectable-xray-runtime.md).
+
 Operate two independent Lightsail proxy VMs and use authenticated client URL testing for failover. Update by replacing one VM at a time, preserving a known-working peer. Client failover cannot guarantee availability during a shared network/provider outage.
 
 Use the current supported Ubuntu Lightsail blueprint in the chosen region and zone. Do not pin or hold an old kernel. Record blueprint, instance identity, running kernel, Xray binary version/checksum for each deployment. A current blueprint can lag upstream package security fixes: check its patch level and release/security notices before promotion. If it lacks an urgent fix, select a corrected image or perform a controlled provisioning-only update before serving traffic; never silently leave a known vulnerable image indefinitely.

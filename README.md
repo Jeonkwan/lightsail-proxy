@@ -1,5 +1,7 @@
 # lightsail-proxy
 
+For selectable native/Docker deployment, switching and the spare-validation plan, see [selectable runtime](docs/selectable-xray-runtime.md).
+
 For agents and contributors: start with [development environment and dependencies](docs/development.md) and [AGENTS.md](AGENTS.md).
 
 🚀 Deploy a ready-to-use proxy host on AWS Lightsail with a single script.

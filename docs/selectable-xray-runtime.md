@@ -1,0 +1,183 @@
+# Selectable Xray runtime
+
+Provision a `basic-vm` with Lightsail first, then deploy from the Ansible controller
+using `Jeonkwan/less-vision-reality`. Runtime selection belongs to proxy deployment,
+not Terraform/bootstrap. Basic provisioning stays minimal for either runtime and
+performs its one controlled reboot before marking bootstrap ready. Proxy deployment
+never installs Ansible on the VM or schedules a reboot.
+
+## Defaults and contract
+
+| Setting | Native | Docker |
+| --- | --- | --- |
+| `xray_deployment_mode` / Actions `deployment_mode` | `native` (default) | `docker` |
+| Version | `xray_binary_version=26.3.27`; reviewed `25.10.15` available | `xray_container_image_version=25.10.15` |
+| Actions version input | `xray_version=26.3.27` (native binary only) | `container_image_version=25.10.15` |
+| Runtime | verified official archive binary, dedicated unprivileged `xray` account | official `ghcr.io/xtls/xray-core:25.10.15`, Compose |
+| Config | `/usr/local/etc/xray/config.json`, root:xray 0640 | `/opt/xray/config/config.json`, root:root 0600 |
+| Runtime files | `/usr/local/bin/xray`, `/etc/systemd/system/xray.service` | `/opt/xray/docker-compose.yml`; Compose project/service `xray` |
+| Logs | journald; no text logs/logrotate | json-file, 10 MB × three files |
+
+Both modes share the same VLESS/REALITY settings, credentials and host policy.
+Host journald uses persistent 100 MB, runtime 32 MB, 10 MB files, seven-day
+retention and no syslog forwarding. Swap, active `kho=off`, held snap refresh and
+disabled background APT maintenance remain unchanged. No floating tags or automatic
+runtime updates are introduced. Unsupported selectors, versions and managed path
+changes fail before host operations. Initial support remains Ubuntu/systemd x86-64.
+
+Native downloads, checksum verification and extraction run on the controller,
+using `scripts/prepare-native.py`; direct Ansible downloads automatically when no
+prepared artifact is supplied. Actions prepares the same verified artifact on its
+runner. Installed and staged binary SHA-256 checks remain mandatory. Native installs
+no Docker, Compose, compiler or admin tools. Docker installs missing curl, GPG,
+CA certificates and lsb-release before configuring its repository, then Engine
+and the Compose plugin. It uses builtin Ansible modules: no Docker SDK or Galaxy
+collection. Credential generation may independently use Docker on the controller.
+
+## Choosing a runtime
+
+From the proxy repository root, with an inventory under `xray_servers`, credentials
+in Vault or `XRAY_UUID`, `XRAY_SHORT_IDS`, `XRAY_PRIVATE_KEY`, `XRAY_PUBLIC_KEY`, and
+optional `XRAY_SNI` already supplied securely:
+
+```bash
+ansible-playbook -i /path/to/inventory.yml ansible/site.yml \
+  -e xray_deployment_mode=native -e xray_binary_version=26.3.27
+ansible-playbook -i /path/to/inventory.yml ansible/site.yml \
+  -e xray_deployment_mode=docker -e xray_container_image_version=25.10.15
+```
+
+`XRAY_DEPLOYMENT_MODE` is the environment equivalent; `-e` takes precedence. Native
+artifact preparation can also be run explicitly using `scripts/prepare-native.py
+--version 26.3.27 --directory /controller/artifacts/xray --github-env /controller/artifact.env`;
+export its `XRAY_BINARY_PATH` and `XRAY_BINARY_SHA256` for the subsequent playbook.
+Keep artifact directories outside tracked files. Never use placeholder credentials
+for deployment.
+
+Actions example (environment names are operator-selected credential stores):
+
+```bash
+gh workflow run deploy.yml --repo Jeonkwan/less-vision-reality \
+  --ref feature/selectable-xray-runtime \
+  -f environment=YOUR_ENVIRONMENT -f remote_server_ip_address=SPARE_IP \
+  -f remote_server_user=ubuntu -f deployment_mode=native -f xray_version=26.3.27
+gh workflow run deploy.yml --repo Jeonkwan/less-vision-reality \
+  --ref feature/selectable-xray-runtime \
+  -f environment=YOUR_ENVIRONMENT -f remote_server_ip_address=SPARE_IP \
+  -f remote_server_user=ubuntu -f deployment_mode=docker -f container_image_version=25.10.15
+```
+
+The reusable workflow exposes the same selection as a string and rejects invalid
+values. Manual dispatch exposes a native/docker choice. No secrets need exporting
+from GitHub Actions. Keep the existing infrastructure `terraform-deploy.yml` intact;
+its `proxy_solution=basic-vm` prepares the host, not an Xray runtime. The guarded
+`native-infrastructure.yml` still needs default-branch registration before manual
+dispatch; do not overwrite a registered workflow to bypass this limitation.
+
+## Switching and rollback
+
+First select one host (`--limit` for multi-host inventories), preserve a healthy
+peer, and record diagnostics/client results and current versions. A runtime switch
+has a brief interruption. Opposite active Docker containers or active/enabled native
+services require `xray_allow_runtime_switch=true`; Actions uses
+`allow_runtime_switch=true`. Inactive retained artifacts do not require opt-in on
+normal repeats. Ownership is checked before deployment: native unit content and
+paths, or Docker Compose labels, working directory, config file and bind mount.
+Ambiguous units/containers/configuration fail closed. Docker daemon errors are not
+interpreted as absence; an installed daemon must be inspectable. Unrelated port
+listeners cause failure; deployment never removes them.
+
+```bash
+# Native -> Docker
+ansible-playbook -i /path/to/inventory.yml ansible/site.yml --limit spare \
+  -e xray_deployment_mode=docker -e xray_allow_runtime_switch=true
+# Docker -> native, also rollback of the preceding switch
+ansible-playbook -i /path/to/inventory.yml ansible/site.yml --limit spare \
+  -e xray_deployment_mode=native -e xray_allow_runtime_switch=true \
+  -e xray_binary_version=26.3.27
+# Reviewed native version rollback
+ansible-playbook -i /path/to/inventory.yml ansible/site.yml --limit spare \
+  -e xray_deployment_mode=native -e xray_binary_version=25.10.15
+```
+
+Docker validates the candidate in an isolated temporary container with no network
+or published ports, then validates Compose. Native validates the candidate binary
+and config pair. Only afterward does deployment stop the verified opposite runtime:
+native is disabled, or the exact Docker container is stopped (`unless-stopped`
+keeps it stopped across daemon/host restart). Activation checks port availability
+across IPv4/IPv6 and requires the selected runtime/listener. If activation fails,
+Ansible attempts to stop the selected runtime and restore the previous opposite
+runtime, then reports failure. This is best-effort recovery, not a guarantee against
+host/daemon failure; inspect the host before retrying. Invalid candidates leave the
+serving runtime intact. Same-mode post-activation failures need operator diagnosis
+and redeployment of the last reviewed configuration/version.
+
+Inactive binary/config/unit, Docker container and packages are retained for rollback.
+No containers, networks or unrelated config are removed; no `--remove-orphans`,
+prune, port-based cleanup or global Docker stop is used. A Docker -> native switch
+therefore retains Docker packages. A fresh native VM is the way to obtain the minimal
+package footprint. Normal unchanged deployment preserves the running native process
+or Docker container and host boot. A config change explicitly recreates the Docker
+container because bind-file contents alone do not trigger Compose recreation.
+
+Lifecycle tags always honor the selector and ownership guard:
+
+```bash
+ansible-playbook -i /path/to/inventory.yml ansible/site.yml \
+  -e xray_deployment_mode=native --tags xray_down
+ansible-playbook -i /path/to/inventory.yml ansible/site.yml \
+  -e xray_deployment_mode=docker --tags xray_reload
+# Either mode: xray_down stops; xray_reload restarts;
+# xray_recreate explicitly restarts native or recreates Docker.
+```
+
+These tags act on existing deployments; they do not install packages or stage config.
+To restore a stopped service, use a normal deployment. Lifecycle stop is temporary
+for native (its existing enablement is retained); use an explicit switch to disable
+it when selecting Docker.
+
+## Diagnostics and validation status
+
+`diagnose.yml` accepts `deployment_mode`, the credential `environment`, explicit
+`target` and expected `address`. Stages cover readiness, clients, inspection,
+baseline/compare, failure recovery, reboot and log rotation. Use
+`require_minimal_host=true` only for a freshly provisioned native host. Native
+inspection allows inactive retained Docker artifacts after a switch but rejects a
+running managed Docker peer. Docker inspection requires the pinned running image,
+bounded json-file logs and disabled/stopped native unit. Baselines compare boot plus
+native PID/start/restarts or Docker ID/PID/start/restarts. Mutation stages still
+require the selected hostname to resolve to the expected IP. Existing profile
+names/fingerprints remain cream/flatwhite/decaf; adding a different spare name needs
+reviewed sanitized profile/target support before live validation.
+
+Local checks execute selector dispatch and reject invalid modes before host operations,
+exercise ownership rejection, verify archive corruption rejection, and validate the
+shared config with both reviewed official binaries. CI syntax-checks both modes.
+These checks do not prove Docker Engine behavior or authenticated transport on a VM.
+This refactor has **not been live validated**. Previous native validation evidence
+belongs to the native branch and cannot establish selectable-runtime correctness.
+
+## Proposed spare-instance validation (requires selected target and authorization)
+
+1. Select a disposable hostname/profile, zone, expected peer identities and credential
+   environment. Use an isolated Terraform workspace and review a plan containing only
+   spare resources. Do not replace Flat White or Decaf or reuse their state.
+2. Provision basic-vm, wait for completed bootstrap and active `kho=off`; record
+   instance/IP/kernel/boot and verify serving peers with existing Actions clients.
+3. On a fresh spare, deploy native 26.3.27 and run inspection with minimal-host
+   assertion. Validate sing-box 1.11.4 and mihomo 1.19.32 against IP and hostname.
+4. Save baseline, redeploy unchanged, compare process/boot; inject invalid config and
+   confirm rejection plus unchanged baseline/client success. Test SIGKILL recovery,
+   authorized reboot recovery and actual journal rotation. Recheck peers.
+5. Recreate only the disposable spare for a fresh Docker test. Deploy pinned 25.10.15;
+   repeat both clients, baseline/redeploy, invalid candidate, failure/reboot recovery
+   and actual json-file rotation. Verify host journals/maintenance and peers.
+6. On the spare, test Docker -> native -> Docker with explicit opt-in and rollback.
+   Confirm only the selected runtime serves/restarts at boot; record inactive artifacts,
+   config ownership and unrelated-container/network preservation. Test refusal without
+   switch opt-in and refusal for unrelated same-name resources/port listeners.
+7. Record sanitized run links and runtime/binary/image digest evidence. Promotion,
+   serving-node deployment, spare cleanup, merge and releases remain separate decisions.
+
+Runner client success covers supplied proxy transport, not complete iOS TUN/DNS or
+a mobile ISP path. No credential values, state or unfiltered logs belong in evidence.
