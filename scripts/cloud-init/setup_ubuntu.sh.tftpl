@@ -69,6 +69,7 @@ if ! grep -Eq '(^|[[:space:]])kho=off([[:space:]]|$)' /proc/cmdline; then
 [Unit]
 Description=Complete disposable proxy bootstrap after boot policy activation
 After=network-online.target cloud-final.service
+Before=cloud-init.target
 Wants=network-online.target
 ConditionPathExists=!/var/lib/proxy-bootstrap/complete
 [Service]
@@ -76,7 +77,7 @@ Type=oneshot
 ExecStart=/bin/sh /var/lib/proxy-bootstrap/setup.sh
 TimeoutStartSec=1800
 [Install]
-WantedBy=multi-user.target
+WantedBy=cloud-init.target
 EOF
     systemctl daemon-reload
     systemctl enable proxy-bootstrap.service
@@ -119,6 +120,20 @@ retry() {
         sleep "$delay"
     done
 }
+
+# Ubuntu's SSM agent and snap runtime are snaps: freeze auto-refresh as well.
+# Keep the management agent running; replacement is also its update mechanism.
+if command -v snap >/dev/null 2>&1; then
+    timeout 90 snap refresh --hold=forever
+fi
+
+# Disable metadata/download helpers that are unnecessary on a proxy-only host.
+for unit in fwupd-refresh.timer update-notifier-download.timer update-notifier-motd.timer; do
+    if [ "$(systemctl show "$unit" --property=LoadState --value)" != not-found ]; then
+        systemctl disable --now "$unit"
+        systemctl mask "$unit"
+    fi
+done
 
 export DEBIAN_FRONTEND="noninteractive"
 wait_for_apt

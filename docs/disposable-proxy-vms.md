@@ -7,6 +7,7 @@ Use the current supported Ubuntu Lightsail blueprint in the chosen region and zo
 Default ongoing maintenance policy:
 - No daily/periodic host or container reboot.
 - No unattended APT refresh, download or package upgrade; APT services/timers are masked and periodic settings disabled. Existing package transactions are allowed to finish, never killed.
+- Hold automatic snap refresh indefinitely, including the preinstalled SSM agent/runtime; keep those services running. Disable optional firmware/update-notifier metadata timers.
 - No automatic update-triggered reboot. Explicit provisioning installs remain allowed.
 - Bound persistent journal storage to 100 MB and runtime journal storage to 32 MB; Xray json-file logs use max-size 10m and max-file 3.
 - Xray uses a reviewed version tag; record its resolved digest. Docker restart policy recovers process failures. No automatic container image updater.
@@ -14,7 +15,7 @@ Default ongoing maintenance policy:
 
 Basic-VM cloud-init installs only CA certificates, curl, Python3, GPG and lsb-release. Ansible executes on the GitHub runner; Docker is installed during the separate proxy deployment. Legacy deployment modes retain the tools their local playbooks need. Small-host swap remains configured.
 
-Set kho=off in a GRUB drop-in and regenerate GRUB. This disables Kexec HandOver where supported without selecting a kernel version. Activate it with one controlled provisioning reboot before package installation on a small VM. A local systemd oneshot resumes the rendered bootstrap after reboot, marks completion and removes the resume script. Refuse a repeated reboot if the flag is still absent. Cloud-init completion alone is not readiness: require /var/lib/proxy-bootstrap/complete, current-boot kho=off and successful service status. Proxy deployment enforces the update policy and fails before deploying Xray if boot policy is not active; it never schedules a reboot itself.
+Set kho=off in a GRUB drop-in and regenerate GRUB. This disables Kexec HandOver where supported without selecting a kernel version. Activate it with one controlled provisioning reboot before package installation on a small VM. A local systemd oneshot ordered after cloud-final and wanted by cloud-init.target (not multi-user.target) resumes the rendered bootstrap after reboot, marks completion and removes the resume script. Refuse a repeated reboot if the flag is still absent. Cloud-init completion alone is not readiness: require /var/lib/proxy-bootstrap/complete, current-boot kho=off and successful service status. Proxy deployment enforces the update policy and fails before deploying Xray if boot policy is not active; it never schedules a reboot itself.
 
 Replacement workflow:
 1. Choose a spare client-configured name, deploy new infrastructure in an isolated Terraform workspace, verify the plan contains only new resources, and preserve both serving peers.

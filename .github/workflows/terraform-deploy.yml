@@ -53,6 +53,31 @@ jobs:
         scripts/deploy-basic/bootstrap-env.sh
 
         '
+    - name: Retire only failed first-boot Flat White before clean retest
+      run: "set -euo pipefail\nexport TF_VAR_instance_customizable_name=flatwhite\
+        \ TF_VAR_subdomain_name=flatwhite TF_VAR_selected_country=singapore TF_VAR_selected_zone=a\
+        \ TF_VAR_proxy_solution=basic-vm TF_VAR_domain_name=mokamaker.site\naws lightsail\
+        \ get-instance --instance-name lightsail-singapore-a-flatwhite-20261005023816\
+        \ --region ap-southeast-1 --query 'instance.{name:name,ip:publicIpAddress,zone:location.availabilityZone}'\
+        \ > \"$RUNNER_TEMP/target.json\"\npython3 - <<'CHECK'\nimport json,os\nx=json.load(open(os.environ['RUNNER_TEMP']+'/target.json'));assert\
+        \ x=={'name':'lightsail-singapore-a-flatwhite-20261005023816','ip':'3.1.225.76','zone':'ap-southeast-1a'}\n\
+        CHECK\nunset TF_WORKSPACE\nterraform init -input=false -backend-config=\"\
+        bucket=$TF_BACKEND_BUCKET\" -backend-config=\"key=$TF_BACKEND_KEY\" -backend-config=\"\
+        region=$TF_BACKEND_REGION\"\nterraform workspace select flatwhite\nterraform\
+        \ plan -destroy -input=false -out=\"$RUNNER_TEMP/retire.tfplan\"\nterraform\
+        \ show -json \"$RUNNER_TEMP/retire.tfplan\" > \"$RUNNER_TEMP/retire.json\"\
+        \npython3 - <<'CHECK'\nimport os,json\np=json.load(open(os.environ['RUNNER_TEMP']+'/retire.json'));changes=p.get('resource_changes',[]);assert\
+        \ len(changes)==6\nexpected={'aws_lightsail_instance','aws_lightsail_static_ip','aws_lightsail_static_ip_attachment','aws_lightsail_instance_public_ports','aws_lightsail_key_pair','null_resource'};seen=set()\n\
+        for r in changes:\n assert r['change']['actions']==['delete'];t=r['type'];assert\
+        \ t in expected;seen.add(t);b=r['change']['before']\n if t=='aws_lightsail_instance':assert\
+        \ b['name']=='lightsail-singapore-a-flatwhite-20261005023816' and b['availability_zone']=='ap-southeast-1a'\n\
+        \ elif t=='aws_lightsail_static_ip':assert b['name']=='lightsail-singapore-a-flatwhite-ip'\
+        \ and b['ip_address']=='3.1.225.76'\n elif t in ['aws_lightsail_static_ip_attachment','aws_lightsail_instance_public_ports']:assert\
+        \ b['instance_name']=='lightsail-singapore-a-flatwhite-20261005023816'\n elif\
+        \ t=='aws_lightsail_key_pair':assert b['name']=='key-lightsail-singapore-a-flatwhite'\n\
+        \ elif t=='null_resource':assert b['triggers']['subdomain']=='flatwhite'\n\
+        \ print('Verified failed test-host deletion:',r['address'])\nassert seen==expected\n\
+        CHECK\nterraform apply -input=false \"$RUNNER_TEMP/retire.tfplan\"\n"
     - name: Require unused Flat White name and protect serving peers
       run: "set -euo pipefail\naws lightsail get-instances --region ap-southeast-1\
         \ > \"$RUNNER_TEMP/instances.json\"\naws lightsail get-static-ips --region\
@@ -105,7 +130,7 @@ jobs:
     timeout-minutes: 25
 'on':
   workflow_dispatch: {}
-run-name: Flat White disposable VM end-to-end infrastructure deployment
+run-name: Recreate Flat White for clean corrected bootstrap test
 concurrency:
   group: flatwhite-disposable-test
   cancel-in-progress: false
