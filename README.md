@@ -159,7 +159,7 @@ Example session:
 By default, this repository deploys AWS Lightsail `nano` instances, which are resource-constrained (512MB RAM). To prevent system freezes and Out-of-Memory (OOM) failures during intensive operations (like automatic package upgrades or multiple Docker services):
 
 - **2GB Swap Space**: The setup automatically configures a 2GB persistent swap file on the SSD root partition.
-- **Daily Reboot Cron Job**: The VM is automatically scheduled to reboot daily at 5:00 AM China Time (21:00 UTC) to release any leaked memory and stale connections.
+- **Replacement-based maintenance**: Background APT maintenance and routine reboots are disabled. Bounded logs, active `kho=off`, and one provisioning reboot support small hosts. Update by validating a replacement VM.
 
 For more details on the boot stages and how these protection mechanisms work, see the [Architecture and Resilience Guide](file:///Users/jeonkwan/github/myProxyProject/lightsail-proxy/docs/architecture-and-resilience.md).
 
