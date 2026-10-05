@@ -1,7 +1,6 @@
 #!/bin/sh
 
 set -eu
-set -x
 
 USERNAME="${username}"
 DOMAIN="${domain_name}"
@@ -26,20 +25,84 @@ if [ ! -f /swapfile ]; then
     echo '/swapfile none swap sw 0 0' >> /etc/fstab
 fi
 
-# Configure daily reboot at 5:00 AM China Time (21:00 UTC)
-cat <<'EOF' > /etc/cron.d/daily-reboot
-0 21 * * * root /sbin/shutdown -r now
+# Bound host logs without scheduling routine restarts.
+mkdir -p /etc/systemd/journald.conf.d
+cat <<'EOF' > /etc/systemd/journald.conf.d/zz-proxy-retention.conf
+[Journal]
+SystemMaxUse=100M
+RuntimeMaxUse=32M
+SystemMaxFileSize=10M
+MaxRetentionSec=7day
+Storage=persistent
+ForwardToSyslog=no
 EOF
-chmod 644 /etc/cron.d/daily-reboot
-chown root:root /etc/cron.d/daily-reboot
+chmod 644 /etc/systemd/journald.conf.d/zz-proxy-retention.conf
+systemctl restart systemd-journald
+
+# Disposable hosts receive updates through replacement, not background maintenance.
+mkdir -p /etc/apt/apt.conf.d
+cat <<'EOF' > /etc/apt/apt.conf.d/99-proxy-disposable
+APT::Periodic::Enable "0";
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Download-Upgradeable-Packages "0";
+APT::Periodic::Unattended-Upgrade "0";
+Unattended-Upgrade::Automatic-Reboot "false";
+EOF
+# Stop timers only. Masking services does not interrupt an existing dpkg transaction.
+systemctl disable --now apt-daily.timer apt-daily-upgrade.timer
+systemctl mask apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service
+systemctl disable unattended-upgrades.service
+
+# Disable KHO without selecting or holding a kernel version.
+mkdir -p /etc/default/grub.d
+cat <<'EOF' > /etc/default/grub.d/98-proxy-kho.cfg
+GRUB_CMDLINE_LINUX_DEFAULT="$${GRUB_CMDLINE_LINUX_DEFAULT} kho=off"
+EOF
+update-grub
+
+# Activate KHO policy before memory-intensive package installation. Resume exactly
+# this rendered bootstrap after reboot; do not download mutable scripts or secrets.
+mkdir -p /var/lib/proxy-bootstrap
+if ! grep -Eq '(^|[[:space:]])kho=off([[:space:]]|$)' /proc/cmdline; then
+    if [ -f /var/lib/proxy-bootstrap/reboot-requested ]; then
+        echo "KHO flag absent after provisioning reboot; refusing a reboot loop" >&2
+        exit 1
+    fi
+    install -m 0600 "$0" /var/lib/proxy-bootstrap/setup.sh
+    cat <<'EOF' > /etc/systemd/system/proxy-bootstrap.service
+[Unit]
+Description=Complete disposable proxy bootstrap after boot policy activation
+After=network-online.target cloud-final.service
+Before=cloud-init.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/proxy-bootstrap/complete
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /var/lib/proxy-bootstrap/setup.sh
+TimeoutStartSec=1800
+[Install]
+WantedBy=cloud-init.target
+EOF
+    systemctl daemon-reload
+    systemctl enable proxy-bootstrap.service
+    touch /var/lib/proxy-bootstrap/reboot-requested
+    shutdown -r +1 'Activate proxy boot policy before package installation'
+    exit 0
+fi
 
 wait_for_apt() {
-    # Lightsail images often run unattended upgrades on first boot; wait until locks clear.
+    # Let any first-boot package transaction finish; never kill dpkg.
+    waited=0
     while fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
         || fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
         || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 \
         || fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+        if [ "$waited" -ge 600 ]; then
+            echo "Timed out waiting for package locks" >&2
+            return 1
+        fi
         sleep 5
+        waited=$((waited + 5))
     done
 }
 
@@ -62,38 +125,51 @@ retry() {
     done
 }
 
-export DEBIAN_FRONTEND="noninteractive"
-wait_for_apt
-retry 5 10 apt-get update
-wait_for_apt
-retry 5 10 apt-get install --no-install-recommends -y \
-    at \
-    vim \
-    uuid \
-    zip \
-    unzip \
-    ipcalc \
-    htop \
-    curl \
-    tree \
-    python3 \
-    python3-pip \
-    python3-venv \
-    gpg \
-    gpg-agent \
-    cron \
-    git
-
-if [ ! -d /opt/venv-gcp-proxy ]; then
-    python3 -m venv /opt/venv-gcp-proxy
+# Ubuntu's SSM agent and snap runtime are snaps: freeze auto-refresh as well.
+# Keep the management agent running; replacement is also its update mechanism.
+if command -v snap >/dev/null 2>&1; then
+    timeout 90 snap refresh --hold=forever
 fi
-VENV_PYTHON="/opt/venv-gcp-proxy/bin/python"
-export PATH="/opt/venv-gcp-proxy/bin/:$PATH"
-"$VENV_PYTHON" -m pip install --upgrade pip
-"$VENV_PYTHON" -m pip install \
-    ansible \
-    docker
-/opt/venv-gcp-proxy/bin/ansible-galaxy collection install community.docker
+
+# Disable metadata/download helpers that are unnecessary on a proxy-only host.
+for unit in fwupd-refresh.timer update-notifier-download.timer update-notifier-motd.timer; do
+    if [ "$(systemctl show "$unit" --property=LoadState --value)" != not-found ]; then
+        systemctl disable --now "$unit"
+        systemctl mask "$unit"
+    fi
+done
+
+export DEBIAN_FRONTEND="noninteractive"
+if [ "$PROXY_SOLUTION" = basic-vm ]; then
+    # Remote Ansible needs Python, not a local Ansible installation. Native Xray
+    # and release downloads are supplied by the control host.
+    missing=""
+    for package in ca-certificates python3; do
+        if ! dpkg-query -W -f='$${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed'; then
+            missing="$missing $package"
+        fi
+    done
+    if [ -n "$missing" ]; then
+        wait_for_apt
+        retry 5 10 apt-get update
+        wait_for_apt
+        retry 5 10 apt-get install --no-install-recommends -y $missing
+    fi
+else
+    wait_for_apt
+    retry 5 10 apt-get update
+    wait_for_apt
+    # Legacy solutions still execute their playbooks locally.
+    retry 5 10 apt-get install --no-install-recommends -y \
+        ca-certificates curl python3 python3-pip python3-venv gpg gpg-agent cron git
+    if [ ! -d /opt/venv-gcp-proxy ]; then
+        python3 -m venv /opt/venv-gcp-proxy
+    fi
+    VENV_PYTHON="/opt/venv-gcp-proxy/bin/python"
+    export PATH="/opt/venv-gcp-proxy/bin/:$PATH"
+    "$VENV_PYTHON" -m pip install ansible docker
+    /opt/venv-gcp-proxy/bin/ansible-galaxy collection install community.docker
+fi
 
 SOLUTIONS_DIR="/opt/lightsail-proxy"
 mkdir -p "$SOLUTIONS_DIR"
@@ -149,10 +225,17 @@ case "$PROXY_SOLUTION" in
             --docker-user "$USERNAME"
         ;;
     basic-vm)
-        echo "Basic VM mode active. Packages installed, skipping proxy deployment."
+        echo "Basic VM requirements ready; skipping proxy deployment."
         ;;
     *)
         echo "Unsupported proxy_solution: $${PROXY_SOLUTION}" >&2
         exit 1
         ;;
 esac
+
+# Readiness is separate from cloud-init completion on the initial boot.
+uname -r > /var/lib/proxy-bootstrap/kernel-at-provisioning
+touch /var/lib/proxy-bootstrap/complete
+# The original cloud-init user-data is already retained by cloud-init; remove the
+# extra resume copy after successful provisioning.
+rm -f /var/lib/proxy-bootstrap/setup.sh

@@ -1,8 +1,28 @@
 # lightsail-proxy
 
+For selectable native/Docker deployment, switching and the spare-validation plan, see [selectable runtime](docs/selectable-xray-runtime.md).
+
+For agents and contributors: start with [development environment and dependencies](docs/development.md) and [AGENTS.md](AGENTS.md).
+
 🚀 Deploy a ready-to-use proxy host on AWS Lightsail with a single script.
 
 This project provisions and maintains a Lightsail instance, associates a static IP, uploads your SSH key, and opens the required ports so you can jump straight into configuring your proxy stack.
+
+## Selectable Xray deployment
+
+Use `proxy_solution=basic-vm` for this runtime path. Infrastructure provisions the
+host and completes its controlled bootstrap reboot; the sibling proxy repository
+then runs Ansible from the controller with `xray_deployment_mode=native|docker`.
+Native 26.3.27 is the default; Docker uses official image 26.3.27. Basic bootstrap
+installs neither Docker nor server-side Ansible. Runtime files live at
+`/usr/local/etc/xray` (native) or `/opt/xray` (Docker).
+
+The remaining solution-specific examples describe legacy server-side bootstrap.
+Use the [runtime contract](docs/selectable-xray-runtime.md) for the current selector,
+exact deployment/switch/rollback commands and the
+[spare validation record](docs/selectable-runtime-validation.md) for acceptance and
+cleanup. The registered infrastructure workflow has a guarded Americano/Latte spare
+path while preserving its normal inputs and behavior.
 
 ## Prerequisites ✅
 
@@ -22,7 +42,7 @@ This project provisions and maintains a Lightsail instance, associates a static 
   - `instance_customizable_name` becomes part of the instance name.
   - `ssh_public_key_path` / `ssh_private_key_path` point at your key pair.
   - Domain-related settings feed directly into the user data template so the VM can update DNS and configure certificates.
-- `proxy_solution` selects which automation stack boots on the instance (`trojan-go`, `less-vision`, or `less-vision-reality`).
+- `proxy_solution` selects which automation stack boots on the instance (`basic-vm` for controller-managed Xray, or legacy `trojan-go`, `less-vision`, `less-vision-reality`).
 - `proxy_contact_email` stays optional for Trojan-Go and `less-vision-reality` but is required when `proxy_solution = "less-vision"` so Let’s Encrypt can send certificate notices.
 - Selecting `less-vision-reality` also requires `less_vision_reality_short_ids` (one or more comma-separated Reality short IDs) and the matching base64-encoded Reality key pair (`less_vision_reality_private_key`/`less_vision_reality_public_key`).
 - Optional: `less_vision_reality_decoy_domain` overrides the Reality SNI/decoy domain passed to the playbook. The default is `web.wechat.com`, mirroring the upstream repository.
@@ -152,14 +172,14 @@ Example session:
 
 - Every pull request runs the **Terraform Validate** GitHub Actions workflow, which performs `terraform init -backend=false` followed by `terraform validate` using Terraform 1.6.6.
 - To match CI locally, run the same commands from the repository root and consider exporting `TF_PLUGIN_CACHE_DIR` so Terraform can reuse provider downloads between runs.
-- For a guide on setting up the automated deployment pipeline with S3 backend native locking, see the [CI/CD Workflow Guide](file:///Users/jeonkwan/github/myProxyProject/lightsail-proxy/docs/github-actions-deployment.md).
+- For a guide on setting up the automated deployment pipeline with the S3 backend, see the [CI/CD Workflow Guide](docs/github-actions-deployment.md).
 
 ## Resilience & Resource Optimization 🛡️
 
 By default, this repository deploys AWS Lightsail `nano` instances, which are resource-constrained (512MB RAM). To prevent system freezes and Out-of-Memory (OOM) failures during intensive operations (like automatic package upgrades or multiple Docker services):
 
 - **2GB Swap Space**: The setup automatically configures a 2GB persistent swap file on the SSD root partition.
-- **Daily Reboot Cron Job**: The VM is automatically scheduled to reboot daily at 5:00 AM China Time (21:00 UTC) to release any leaked memory and stale connections.
+- **Replacement-based maintenance**: Background APT maintenance and routine reboots are disabled. Bounded logs, active `kho=off`, and one provisioning reboot support small hosts. Update by validating a replacement VM.
 
 For more details on the boot stages and how these protection mechanisms work, see the [Architecture and Resilience Guide](file:///Users/jeonkwan/github/myProxyProject/lightsail-proxy/docs/architecture-and-resilience.md).
 
@@ -199,3 +219,22 @@ flowchart TD
 - **Safer secret distribution** – Terraform injects sensitive values (Namecheap token, proxy UUID, contact email) into the template so the secrets stay transient and only touch the VM that needs them.
 - **Predictable rebuilds** – Each `terraform apply` replaces the instance with a fresh host that replays the same cloud-init script, guaranteeing that Trojan-Go and less-vision stay in sync with the repository.
 - **Future expansion** – Adding another solution only requires creating `scripts/<new-solution>/setup.sh` plus its playbook; cloud-init will handle detection and dispatching once `proxy_solution` points to it.
+# Host maintenance
+
+New instances do not schedule daily reboots. Cloud-init limits persistent system
+journal storage to 100 MB and runtime journal storage to 32 MB. Reboot only for
+maintenance that requires it, followed by an authenticated proxy check.
+
+This fresh-instance bootstrap does not remove jobs on existing hosts. Proxy
+container logging is configured by the separate proxy deployment repository.
+
+See [disposable proxy VM strategy](docs/disposable-proxy-vms.md) for replacement-based updates, boot readiness and validation.
+
+## Native Xray feature
+
+`feature/native-xray` builds on `feature/bounded-logs`. Native runtime installation
+uses runner-verified official release binaries and systemd, with persistent bounded
+journald logs. See [native deployment](docs/native-xray.md). Use `basic-vm` for the
+minimal host and deploy the proxy from the companion repository's Actions runner.
+
+See [Americano/Latte validation and cleanup](docs/selectable-runtime-validation.md) for the task scope and evidence.

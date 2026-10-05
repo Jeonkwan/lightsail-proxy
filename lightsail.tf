@@ -62,14 +62,14 @@ resource "aws_lightsail_instance" "lightsail_instance" {
       domain_name             = var.domain_name,
       subdomain_name          = var.subdomain_name,
       public_ip               = aws_lightsail_static_ip.instance_ip.ip_address,
-      namecheap_ddns_password = var.namecheap_ddns_password,
-      proxy_server_uuid       = var.proxy_server_uuid,
+      namecheap_ddns_password = var.proxy_solution == "basic-vm" ? "" : var.namecheap_ddns_password,
+      proxy_server_uuid       = var.proxy_solution == "basic-vm" ? "" : var.proxy_server_uuid,
       playbook_branch         = var.playbook_branch,
       proxy_solution          = var.proxy_solution,
       proxy_contact_email     = var.proxy_contact_email,
       less_vision_reality_short_ids = join(",", var.less_vision_reality_short_ids),
-      less_vision_reality_private_key = var.less_vision_reality_private_key,
-      less_vision_reality_public_key  = var.less_vision_reality_public_key,
+      less_vision_reality_private_key = var.proxy_solution == "basic-vm" ? "" : var.less_vision_reality_private_key,
+      less_vision_reality_public_key  = var.proxy_solution == "basic-vm" ? "" : var.less_vision_reality_public_key,
       less_vision_reality_decoy_domain = var.less_vision_reality_decoy_domain
     }
   )

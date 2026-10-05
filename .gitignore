@@ -32,3 +32,6 @@ override.tf.json
 tf_cloud_backend.tf
 .vscode/settings.json
 namecheap_dns_update.log
+
+__pycache__/
+*.pyc
