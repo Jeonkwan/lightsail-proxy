@@ -1,5 +1,9 @@
 # Native Xray validation — 2026-10-05
 
+This is a historical native migration record. For the subsequent Cream Docker
+replacement, current serving identities and retirement evidence, see
+[selectable runtime validation](selectable-runtime-validation.md).
+
 Historical native-only evidence. For selectable native/Docker deployment, use the
 [runtime contract](selectable-xray-runtime.md) and
 [spare acceptance record](selectable-runtime-validation.md).

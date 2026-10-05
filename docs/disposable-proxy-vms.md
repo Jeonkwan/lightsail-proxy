@@ -35,4 +35,9 @@ Singapore zone C, preserving the static IP/credentials and keeping Flat White
 serving. No 24-hour soak is required; authenticated client and lifecycle checks
 are the acceptance gate. Credentials stay in GitHub Actions environments.
 
-See [Americano/Latte validation and cleanup](selectable-runtime-validation.md) for the task scope and evidence.
+The subsequent owner-selected Cream replacement uses Docker 26.3.27 and a narrower
+acceptance gate: deployment plus supplied sing-box/mihomo IP and hostname connections.
+Keep Cream on success, retire exact Flat White and preserve Decaf. No additional
+reboot/failure/log-injection suite or soak is required for that version alignment.
+See [runtime validation and current nodes](selectable-runtime-validation.md) for
+current identities, evidence and cleanup.

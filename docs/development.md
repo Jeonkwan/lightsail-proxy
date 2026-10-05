@@ -112,4 +112,5 @@ read-only check. Do not run apply/destroy on a shared workspace as part of setup
 Read [disposable VM strategy](disposable-proxy-vms.md) and
 [Actions deployment](github-actions-deployment.md) before live operations.
 
-See [Americano/Latte validation and cleanup](selectable-runtime-validation.md) for the task scope and evidence.
+See [runtime validation and current nodes](selectable-runtime-validation.md) for
+Cream replacement acceptance, historical spare evidence and cleanup scope.

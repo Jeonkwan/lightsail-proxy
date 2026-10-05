@@ -38,3 +38,12 @@ Preserve Decaf and shared credentials/backends. Merge this task's PR chain after
 validation; do not publish releases. This supersedes the previous task's scope,
 not standing authorization for later operations. Record final identities and evidence
 in docs/selectable-runtime-validation.md and keep human/agent instructions aligned.
+
+Current deployment record for this completed replacement: Cream
+`lightsail-singapore-a-cream-20261005165610`, `18.136.58.134`, Docker 26.3.27;
+Decaf `lightsail-singapore-c-decaf-20261005103556`, `52.74.81.140`, native 26.3.27.
+Flat White `lightsail-singapore-a-flatwhite-20261005090040` is retired; its owned
+resources/workspace are removed and DNS is parked at 127.0.0.1. Retain the shared
+Actions environment/secrets despite its historical name `flatwhite`. Any later
+cloud mutation needs a new owner-selected scope; these records are evidence, not
+permission to redeploy serving nodes or repeat retirement. See the validation record.

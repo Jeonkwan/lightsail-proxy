@@ -65,11 +65,11 @@ Actions example (environment names are operator-selected credential stores):
 
 ```bash
 gh workflow run deploy.yml --repo Jeonkwan/less-vision-reality \
-  --ref feature/selectable-xray-runtime \
+  --ref main \
   -f environment=YOUR_ENVIRONMENT -f remote_server_ip_address=SPARE_IP \
   -f remote_server_user=ubuntu -f deployment_mode=native -f xray_version=26.3.27
 gh workflow run deploy.yml --repo Jeonkwan/less-vision-reality \
-  --ref feature/selectable-xray-runtime \
+  --ref main \
   -f environment=YOUR_ENVIRONMENT -f remote_server_ip_address=SPARE_IP \
   -f remote_server_user=ubuntu -f deployment_mode=docker -f container_image_version=26.3.27
 ```
@@ -78,8 +78,8 @@ The reusable workflow exposes the same selection as a string and rejects invalid
 values. Manual dispatch exposes a native/docker choice. No secrets need exporting
 from GitHub Actions. Keep the existing infrastructure `terraform-deploy.yml` intact;
 its `proxy_solution=basic-vm` prepares the host, not an Xray runtime. The guarded
-`native-infrastructure.yml` still needs default-branch registration before manual
-dispatch; do not overwrite a registered workflow to bypass this limitation.
+`native-infrastructure.yml` becomes registered when this PR chain merges into main;
+it and the optional selected-host path provision a basic VM for either runtime.
 
 ## Switching and rollback
 
@@ -171,8 +171,8 @@ Previous native-only evidence cannot establish selectable-runtime correctness.
 
 ## Historical Americano/Latte acceptance and cleanup
 
-For a future run, obtain a selected disposable target and mutation/cleanup scope first.
-The current owner selected Americano (zone A) and Latte (zone C), including destruction
+For a future two-mode run, obtain a selected disposable target and mutation/cleanup scope first.
+The earlier owner scope selected Americano (zone A) and Latte (zone C), including destruction
 after validation. This task-specific authorization does not extend to serving peers.
 
 1. Use isolated Terraform workspaces and the guarded registered spare workflow. It
@@ -219,12 +219,12 @@ selected-host path without overwriting normal workflow behavior:
 
 ```bash
 gh workflow run terraform-deploy.yml --repo Jeonkwan/lightsail-proxy \
-  --ref feature/selectable-xray-runtime -f workspace=cream -f tf_action=plan \
+  --ref main -f workspace=cream -f tf_action=plan \
   -f instance_operation=inspect -f instance_target=cream
 # After inspection confirms no Cream resources, change inspect to create.
 # After Cream acceptance, retire only the recorded Flat White identity:
 gh workflow run terraform-deploy.yml --repo Jeonkwan/lightsail-proxy \
-  --ref feature/selectable-xray-runtime -f workspace=flatwhite -f tf_action=plan \
+  --ref main -f workspace=flatwhite -f tf_action=plan \
   -f instance_operation=destroy -f instance_target=flatwhite \
   -f expected_instance=EXACT_RECORDED_FLATWHITE_INSTANCE
 ```
