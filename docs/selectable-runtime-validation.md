@@ -4,8 +4,9 @@ The owner selected **Americano** (Singapore zone A) and **Latte** (Singapore zon
 for disposable validation, including reboot/failure/log-rotation tests, runtime
 switching and destruction afterward. Flat White and Decaf remain serving peers.
 
-Americano starts fresh in native mode; Latte starts fresh in Docker mode. Each
-then switches to the other mode and rolls back using explicit switch opt-in.
+Americano started fresh in native mode; Latte started fresh in Docker mode. Each
+then switched to the other mode and rolled back using explicit switch opt-in. Americano
+resumed in Docker after retaining its earlier fresh-native inspection evidence.
 Runner-side sing-box 1.11.4 and mihomo 1.19.32 profiles retain the supplied transport
 settings and one-way credential fingerprints; only client labels/addresses change.
 Secrets come from the existing shared Actions environment, never the workspace.
@@ -25,9 +26,67 @@ candidate rejection, recovery/reboot/log retention, switching/rollback, and peer
 clients. Individual mutation stages require hostname/IP binding. A fresh native host
 must additionally prove Docker absent; switched native hosts retain inactive packages.
 
-Status: live acceptance is running on the two selected spares. Final acceptance
-and exact resource cleanup results will be recorded after execution. Run commands and
-runtime limitations remain in [runtime contract](selectable-xray-runtime.md).
+Status: **completed on 2026-10-05; both spares destroyed**. Native 26.3.27 and
+Docker 25.10.15 were validated with the supplied compatible transport profiles,
+against IP and temporary hostname, using both pinned test clients. Neither serving
+peer was redeployed. Existing Namecheap DNS was unchanged. No merge or release.
+
+## Live acceptance and cleanup evidence
+
+| Spare | Created identity (now retired) | Runtime evidence | Guarded cleanup |
+| --- | --- | --- | --- |
+| Americano | `lightsail-singapore-a-americano-20261005130801`, `18.136.230.110` | [fresh native inspection/lifecycle stages](https://github.com/Jeonkwan/less-vision-reality/actions/runs/37315641328); [complete resumed Docker → native → Docker acceptance](https://github.com/Jeonkwan/less-vision-reality/actions/runs/37325096175) | [destroyed](https://github.com/Jeonkwan/lightsail-proxy/actions/runs/37329320966) |
+| Latte | `lightsail-singapore-c-latte-20261005130804`, `46.137.206.231` | [Docker → native → Docker stages](https://github.com/Jeonkwan/less-vision-reality/actions/runs/37316417796); [client recheck](https://github.com/Jeonkwan/less-vision-reality/actions/runs/37319934073), [rollback reboot](https://github.com/Jeonkwan/less-vision-reality/actions/runs/37320104405), [final inspection](https://github.com/Jeonkwan/less-vision-reality/actions/runs/37320136869) | [destroyed](https://github.com/Jeonkwan/lightsail-proxy/actions/runs/37320610039) |
+
+Acceptance covers unchanged process/container and boot, rejection of invalid selector
+and candidate while clients remain healthy, refusal without switch opt-in, explicit
+switch/rollback, SIGKILL/reboot recovery, actual bounded-log rotation and preservation
+of an unrelated container/network/config fixture. Each cleanup verifies absence of
+the selected instance, static IP, key pair and matching snapshots, and deletes its
+empty Terraform workspace. **No Americano/Latte validation resources remain.**
+
+Post-cleanup serving peer transport checks: [run 37330086283](https://github.com/Jeonkwan/less-vision-reality/actions/runs/37330086283), [run 37329634870](https://github.com/Jeonkwan/less-vision-reality/actions/runs/37329634870).
+Flat White remains `54.179.39.30`; Decaf remains `52.74.81.140`.
+
+## Findings and practical limits
+
+Early attempts found two deployment defects: cleanup dereferenced a skipped
+controller-download result, and root-only Docker candidate files were unreadable by
+the official image's UID/GID 65532. Both are fixed with regression coverage. Native
+remains root:xray 0640; Docker config is root:65532 0640 in a restricted directory.
+
+Repeated stress exposed inherited journal-validation false positives. Retention
+measures allocated blocks, not sparse logical lengths; rotation compares new archive
+identities because old archives may be vacuumed at the same time. The
+[read-only measurement](https://github.com/Jeonkwan/less-vision-reality/actions/runs/37322665448)
+showed 156 MiB logical size but only 92.2 MiB allocated, matching journalctl, with the
+100/32/10 MB, seven-day, no-forwarding settings intact. No manual vacuum masks the test.
+
+Recorded native binary SHA-256:
+`8255dd939c34cf966cc91517b6324dd3c8d0bcf49ffac8beca049a38c46845ed`.
+Recorded Docker image ID:
+`sha256:9e479c59250703491b930da62dd6544bb5207b3372e1d8d6ba300b635b2e4990`.
+Provisioned/running kernel remained `7.0.0-1012-aws`; deployment did not upgrade it.
+
+Latte's main attempt and an Americano attempt stopped on intermittent mihomo hostname
+requests after earlier successes. Successful follow-up runs are linked above. The
+complete Americano run logged two recovered curl-35 TLS/network retries. The
+client harness now logs bounded retries for transient network errors, requires every
+sample to succeed, and fails persistent errors; HTTP/configuration failures are not
+retried. The underlying cause of those one-off requests was not established. Runner
+transport success does not establish iOS TUN/DNS or mobile ISP behavior. Native
+25.10.15 remains reviewed and passes real-binary config checks; this spare sequence
+uses native 26.3.27 and container 25.10.15.
+
+Temporary PR triggers used during CLI/queue interruptions were removed after queueing;
+none remain in the final tree. The normal infrastructure workflow was never replaced.
+Future mutation/testing needs newly selected targets and authorized scope. Exact
+selection/switch/rollback commands are in the [runtime contract](selectable-xray-runtime.md).
+
+If a failed attempt has already installed the other runtime, `resume_spare=true`
+allows re-selection on the same disposable host and skips the fresh-native Docker-absence
+assertion. Retain the earlier fresh-host inspection evidence; resumed success does
+not replace that proof. It still executes the complete runtime lifecycle/switch suite.
 
 ## Exact spare commands
 

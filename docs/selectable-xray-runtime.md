@@ -20,7 +20,9 @@ never installs Ansible on the VM or schedules a reboot.
 
 Both modes share the same VLESS/REALITY settings, credentials and host policy.
 Host journald uses persistent 100 MB, runtime 32 MB, 10 MB files, seven-day
-retention and no syslog forwarding. Swap, active `kho=off`, held snap refresh and
+retention and no syslog forwarding. Validate retained disk usage with allocated
+blocks (`st_blocks * 512`, matching `journalctl --disk-usage`), because archived
+journal files can reserve sparse logical space without using that disk capacity. Swap, active `kho=off`, held snap refresh and
 disabled background APT maintenance remain unchanged. No floating tags or automatic
 runtime updates are introduced. Unsupported selectors, versions and managed path
 changes fail before host operations. Initial support remains Ubuntu/systemd x86-64.
@@ -178,7 +180,9 @@ after validation. This task-specific authorization does not extend to serving pe
    1.19.32 against both IP and temporary hostname using the supplied transport profile.
 4. Record a baseline; unchanged redeployment, invalid mode and invalid candidate must
    preserve runtime/boot and clients. Test SIGKILL recovery, reboot and actual bounded
-   journal or Docker json-file rotation. Native still checks host journal retention;
+   journal or Docker json-file rotation. Detect newly created journal archive names
+   rather than requiring a growing file count: retention can delete older archives.
+   Native still checks host journal retention;
    Docker checks both host journals and its own logs.
 5. Refuse switching without opt-in, then switch to the opposite runtime, repeat the
    lifecycle suite and roll back. Preserve an unrelated container/network/config
@@ -189,6 +193,10 @@ after validation. This task-specific authorization does not extend to serving pe
    acceptance and teardown run links. Never leave spares running to await merge.
 
 Merge, releases and serving-node deployment require separate owner instructions.
+
+Client checks require two successful samples per endpoint/engine/address. Transient
+network errors receive at most three attempts per required request, with every retry
+logged; persistent network, HTTP or configuration failures fail validation.
 
 Runner client success covers supplied proxy transport, not complete iOS TUN/DNS or
 a mobile ISP path. No credential values, state or unfiltered logs belong in evidence.

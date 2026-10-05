@@ -20,8 +20,8 @@ runtime selection, diagnostics or Actions. Keep native 26.3.27 / reviewed 25.10.
 and Docker 25.10.15 pinned; verify candidates before switching, scope cleanup by
 ownership, and preserve unchanged runtimes. Agent and human runbooks must stay in sync.
 
-The owner selected Americano and Latte as disposable validation targets and
-requested their destruction after validation. That scope excludes serving Flat White
+On 2026-10-05 the owner-selected Americano and Latte validation completed; both
+spares and their owned resources/workspaces were destroyed after validation. That scope excludes serving Flat White
 and Decaf. Use isolated spare workspaces and the guarded spare Actions path; verify
 exact ownership before destruction and confirm instance/static IP/key/snapshots and
 empty workspace cleanup. Keep existing DNS endpoints unless explicitly selected for
