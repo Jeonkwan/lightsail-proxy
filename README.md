@@ -216,5 +216,5 @@ See [disposable proxy VM strategy](docs/disposable-proxy-vms.md) for replacement
 
 `feature/native-xray` builds on `feature/bounded-logs`. Native runtime installation
 uses runner-verified official release binaries and systemd, with persistent bounded
-journald logs. See [native deployment](docs/native-xray.md). Existing container roles
-are legacy code and are not invoked by the native playbook.
+journald logs. See [native deployment](docs/native-xray.md). Use `basic-vm` for the
+minimal host and deploy the proxy from the companion repository's Actions runner.

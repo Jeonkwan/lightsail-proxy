@@ -8,7 +8,7 @@ portable, but other architectures/distributions need separately reviewed artifac
 and host-policy support.
 
 `prepare-native.py` accepts only reviewed pinned releases (25.10.15 baseline,
-26.3.27 latest stable at review). Official archive SHA-256 is checked before extracting
+26.3.27 latest stable at review and validated default). Official archive SHA-256 is checked before extracting
 only the binary. No geodata, Docker, Compose, compiler or Python packages are
 installed on the VM. Configuration is validated with the candidate binary before
 activation. An unchanged deployment preserves the running process and host boot.
@@ -38,3 +38,11 @@ Terraform operations validate exact target identity and resource scope, preserve
 other instances, and guard instance-only replacement so static IP/key/DNS remain.
 Destruction removes owned snapshots, an empty workspace and parks retired DNS.
 Both product PRs remain draft until explicitly approved for merge.
+
+Guarded operations live in `.github/workflows/native-infrastructure.yml`; the
+normal `terraform-deploy.yml` retains its existing inputs and deployment behavior.
+GitHub requires a workflow to be registered on the default branch for manual
+dispatch. During this draft's live validation, the guarded definition temporarily
+used the already registered `terraform-deploy.yml` filename, which was restored
+after cleanup. The separate native workflow needs registration before future
+manual dispatch. See [validation evidence](native-xray-validation.md).
