@@ -55,3 +55,6 @@ jobs:
 
       - name: Validate bootstrap first boot, resume and reboot guard
         run: python3 scripts/tests/test_proxy_bootstrap.py
+
+      - name: Reject unsafe native replacement plans
+        run: python3 scripts/tests/test_native_infrastructure.py
