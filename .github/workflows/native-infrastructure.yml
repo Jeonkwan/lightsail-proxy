@@ -8,6 +8,7 @@ run-name: 'Native infrastructure: ${{ inputs.operation }} ${{ inputs.target }}'
         options:
         - cream
         - flatwhite
+        - decaf
         required: true
         default: cream
       operation:
@@ -48,7 +49,7 @@ jobs:
       TF_VAR_instance_customizable_name: ${{ inputs.target }}
       TF_VAR_subdomain_name: ${{ inputs.target }}
       TF_VAR_selected_country: singapore
-      TF_VAR_selected_zone: a
+      TF_VAR_selected_zone: ${{ inputs.target == 'decaf' && 'c' || 'a' }}
       TF_VAR_domain_name: mokamaker.site
       TF_VAR_proxy_solution: basic-vm
       TF_VAR_playbook_branch: feature/native-xray
