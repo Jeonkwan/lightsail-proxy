@@ -1,6 +1,7 @@
 # Native Xray validation — 2026-10-05
 
 Both repositories use `feature/native-xray`, based on `feature/bounded-logs`.
+For the subsequent Decaf replacement, see [Decaf native validation](decaf-native-validation.md).
 Product PRs remain draft and unmerged. The owner authorized fresh Cream testing,
 Flat White replacement, and Cream retirement after Flat White passed; no 24-hour
 soak was required.
@@ -37,7 +38,7 @@ clients. Unchanged redeployment preserved PID, start timestamp, restart count an
 boot ID. Journal probes produced actual rotation: Cream retained 54,525,952 bytes,
 Flat White 94,371,840 bytes, within the 100 MB budget plus active-file allowance.
 
-## Timing and final state
+## Timing and state after the initial migration
 
 The Ansible portion measured about 84 seconds for Cream/25.10.15, 121 seconds for
 Cream/26.3.27, and 149 seconds for fresh Flat White/26.3.27, versus about 300 seconds
