@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Guard selected Cream/Flat White/Decaf resources; preserve every other instance."""
 import json,os,pathlib,subprocess,time
-TARGET_ZONES={'cream':'a','flatwhite':'a','decaf':'c'}
+TARGET_ZONES={'cream':'a','flatwhite':'a','decaf':'c','americano':'a','latte':'c'}
+SPARE_TARGETS={'americano','latte'}
 
 def call(*cmd):return subprocess.check_output(cmd,text=True).strip()
 def aws(*args):return json.loads(call('aws','lightsail',*args,'--region','ap-southeast-1'))
@@ -9,10 +10,13 @@ def tf(*args):subprocess.run(['terraform',*args],check=True)
 def main():
  target=os.environ['TARGET'];op=os.environ['OPERATION'];expected=os.environ.get('EXPECTED_INSTANCE','')
  assert target in TARGET_ZONES and op in ['inspect','create','replace','destroy']
+ spare_only=os.environ.get('SPARE_ONLY')=='true'
+ if spare_only:assert target in SPARE_TARGETS,'Spare workflow cannot operate on a serving target'
  zone=TARGET_ZONES[target]
  os.environ.pop('TF_WORKSPACE',None)
  # Workspace-specific bootstrap variables must never redirect this operation.
- for k,v in {'instance_customizable_name':target,'subdomain_name':target,'selected_country':'singapore','selected_zone':zone,'domain_name':'mokamaker.site','proxy_solution':'basic-vm','playbook_branch':'feature/native-xray'}.items():os.environ['TF_VAR_'+k]=v
+ for k,v in {'instance_customizable_name':target,'subdomain_name':target,'selected_country':'singapore','selected_zone':zone,'domain_name':'mokamaker.site','proxy_solution':'basic-vm','playbook_branch':'feature/selectable-xray-runtime'}.items():os.environ['TF_VAR_'+k]=v
+ if spare_only:os.environ['TF_VAR_namecheap_ddns_password']=''
  prefix='lightsail-singapore-'+zone+'-'+target
  before=aws('get-instances')['instances'];selected=[x for x in before if x['name'].startswith(prefix+'-')]
  protected={x['name']:x['publicIpAddress'] for x in before if x not in selected}
@@ -73,6 +77,11 @@ def main():
  if op=='destroy':
   assert not any(x['name'].startswith(prefix+'-') for x in after)
   assert not call('terraform','state','list');tf('workspace','select','default');tf('workspace','delete',target)
+  assert not any(x['name']==prefix+'-ip' for x in aws('get-static-ips')['staticIps'])
+  assert not any(x['name']=='key-'+prefix for x in aws('get-key-pairs')['keyPairs'])
+  assert not any(x.get('fromInstanceName')==expected for x in aws('get-instance-snapshots')['instanceSnapshots'])
+  if spare_only:
+   print('Spare cleanup complete; DNS was never modified; preserved peers:',json.dumps(protected),flush=True);return
   # Park the retired client-configured hostname with no serving address.
   import urllib.parse,urllib.request
   query=urllib.parse.urlencode({'host':target,'domain':'mokamaker.site','password':os.environ['TF_VAR_namecheap_ddns_password'],'ip':'127.0.0.1'})

@@ -13,3 +13,18 @@ requesting/exporting secrets into the workspace. Never commit credentials or sta
 
 Product changes require validation before merging and explicit user confirmation
 for merge. Keep the development guide synchronized when dependencies change.
+
+For selectable runtime work, read [runtime contract](docs/selectable-xray-runtime.md)
+and [spare validation](docs/selectable-runtime-validation.md) before changing
+runtime selection, diagnostics or Actions. Keep native 26.3.27 / reviewed 25.10.15
+and Docker 25.10.15 pinned; verify candidates before switching, scope cleanup by
+ownership, and preserve unchanged runtimes. Agent and human runbooks must stay in sync.
+
+The owner selected Americano and Latte as disposable validation targets and
+requested their destruction after validation. That scope excludes serving Flat White
+and Decaf. Use isolated spare workspaces and the guarded spare Actions path; verify
+exact ownership before destruction and confirm instance/static IP/key/snapshots and
+empty workspace cleanup. Keep existing DNS endpoints unless explicitly selected for
+repointing. Credentials stay in GitHub Actions. This authorization is task-specific,
+not standing permission for future cloud mutations. Merge/releases still require
+separate owner instructions.

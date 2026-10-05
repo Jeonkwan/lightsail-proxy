@@ -34,3 +34,5 @@ The owner then authorized replacing Decaf with a fresh native host in its existi
 Singapore zone C, preserving the static IP/credentials and keeping Flat White
 serving. No 24-hour soak is required; authenticated client and lifecycle checks
 are the acceptance gate. Credentials stay in GitHub Actions environments.
+
+See [Americano/Latte validation and cleanup](selectable-runtime-validation.md) for the task scope and evidence.

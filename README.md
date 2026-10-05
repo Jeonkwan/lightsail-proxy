@@ -220,3 +220,5 @@ See [disposable proxy VM strategy](docs/disposable-proxy-vms.md) for replacement
 uses runner-verified official release binaries and systemd, with persistent bounded
 journald logs. See [native deployment](docs/native-xray.md). Use `basic-vm` for the
 minimal host and deploy the proxy from the companion repository's Actions runner.
+
+See [Americano/Latte validation and cleanup](docs/selectable-runtime-validation.md) for the task scope and evidence.

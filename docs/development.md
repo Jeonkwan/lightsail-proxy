@@ -111,3 +111,5 @@ Terraform plans may replace timestamp-named instances. Never treat `apply` as a
 read-only check. Do not run apply/destroy on a shared workspace as part of setup.
 Read [disposable VM strategy](disposable-proxy-vms.md) and
 [Actions deployment](github-actions-deployment.md) before live operations.
+
+See [Americano/Latte validation and cleanup](selectable-runtime-validation.md) for the task scope and evidence.
