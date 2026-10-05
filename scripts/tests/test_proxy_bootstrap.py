@@ -14,13 +14,15 @@ with tempfile.TemporaryDirectory() as console_dir:
  else:
   source=json.loads(rendered)
 subprocess.run(["sh","-n"],input=source,text=True,check=True)
-for case in ('first','resume','failed'):
+for case in ('first','resume','resume_missing','failed'):
  with tempfile.TemporaryDirectory() as td:
   root=Path(td); cmd=root/'cmd';cmd.mkdir(); log=root/'commands'
   for name in ('fallocate','chmod','mkswap','swapon','systemctl','update-grub','shutdown','apt-get','uname','snap'):
    p=cmd/name;p.write_text('#!/bin/sh\nprintf "%s\\n" "'+name+' $*" >> "$TEST_LOG"\n');p.chmod(0o755)
+  if case=='resume_missing':
+   p=cmd/'dpkg-query';p.write_text('#!/bin/sh\n[ \"$3\" = python3 ] && exit 1\necho \"install ok installed\"\n');p.chmod(0o755)
   boot=root/'var/lib/proxy-bootstrap';boot.mkdir(parents=True)
-  (root/'proc').mkdir();(root/'proc/cmdline').write_text('console=ttyS0 '+('kho=off' if case=='resume' else ''))
+  (root/'proc').mkdir();(root/'proc/cmdline').write_text('console=ttyS0 '+('kho=off' if case.startswith('resume') else ''))
   if case=='failed':(boot/'reboot-requested').touch()
   (root/'etc/systemd/system').mkdir(parents=True);(root/'etc/fstab').touch();(root/'swapfile').touch()
   # All absolute deployment destinations point into the isolated test root.
@@ -40,13 +42,19 @@ for case in ('first','resume','failed'):
    unit=(root/'etc/systemd/system/proxy-bootstrap.service').read_text()
    assert 'WantedBy=cloud-init.target' in unit and 'Before=cloud-init.target' in unit
    assert 'WantedBy=multi-user.target' not in unit
-  elif case=='resume':
+  elif case.startswith('resume'):
    assert r.returncode==0,r.stderr
-   assert 'shutdown' not in lines and 'apt-get' not in lines
+   assert 'shutdown' not in lines
+   if case=='resume_missing':
+    assert 'apt-get update' in lines and 'apt-get install --no-install-recommends -y python3' in lines
+   else:assert 'apt-get' not in lines
    assert 'gpg' not in lines and 'lsb-release' not in lines
    assert 'python3-pip' not in lines and 'ansible' not in lines
    assert (boot/'complete').exists()
   else:
    assert r.returncode!=0 and 'refusing a reboot loop' in r.stderr
-   assert 'shutdown' not in lines and 'apt-get' not in lines
+   assert 'shutdown' not in lines
+   if case=='resume_missing':
+    assert 'apt-get update' in lines and 'apt-get install --no-install-recommends -y python3' in lines
+   else:assert 'apt-get' not in lines
   print(case,'PASS')
