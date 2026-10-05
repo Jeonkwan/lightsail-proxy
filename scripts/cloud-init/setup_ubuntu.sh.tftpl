@@ -1,7 +1,6 @@
 #!/bin/sh
 
 set -eu
-set -x
 
 USERNAME="${username}"
 DOMAIN="${domain_name}"
@@ -36,13 +35,69 @@ EOF
 chmod 644 /etc/systemd/journald.conf.d/50-proxy-retention.conf
 systemctl restart systemd-journald
 
+# Disposable hosts receive updates through replacement, not background maintenance.
+mkdir -p /etc/apt/apt.conf.d
+cat <<'EOF' > /etc/apt/apt.conf.d/99-proxy-disposable
+APT::Periodic::Enable "0";
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Download-Upgradeable-Packages "0";
+APT::Periodic::Unattended-Upgrade "0";
+Unattended-Upgrade::Automatic-Reboot "false";
+EOF
+# Stop timers only. Masking services does not interrupt an existing dpkg transaction.
+systemctl disable --now apt-daily.timer apt-daily-upgrade.timer
+systemctl mask apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service
+systemctl disable unattended-upgrades.service
+
+# Disable KHO without selecting or holding a kernel version.
+mkdir -p /etc/default/grub.d
+cat <<'EOF' > /etc/default/grub.d/98-proxy-kho.cfg
+GRUB_CMDLINE_LINUX_DEFAULT="$${GRUB_CMDLINE_LINUX_DEFAULT} kho=off"
+EOF
+update-grub
+
+# Activate KHO policy before memory-intensive package installation. Resume exactly
+# this rendered bootstrap after reboot; do not download mutable scripts or secrets.
+mkdir -p /var/lib/proxy-bootstrap
+if ! grep -Eq '(^|[[:space:]])kho=off([[:space:]]|$)' /proc/cmdline; then
+    if [ -f /var/lib/proxy-bootstrap/reboot-requested ]; then
+        echo "KHO flag absent after provisioning reboot; refusing a reboot loop" >&2
+        exit 1
+    fi
+    install -m 0600 "$0" /var/lib/proxy-bootstrap/setup.sh
+    cat <<'EOF' > /etc/systemd/system/proxy-bootstrap.service
+[Unit]
+Description=Complete disposable proxy bootstrap after boot policy activation
+After=network-online.target cloud-final.service
+Wants=network-online.target
+ConditionPathExists=!/var/lib/proxy-bootstrap/complete
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /var/lib/proxy-bootstrap/setup.sh
+TimeoutStartSec=1800
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable proxy-bootstrap.service
+    touch /var/lib/proxy-bootstrap/reboot-requested
+    shutdown -r +1 'Activate proxy boot policy before package installation'
+    exit 0
+fi
+
 wait_for_apt() {
-    # Lightsail images often run unattended upgrades on first boot; wait until locks clear.
+    # Let any first-boot package transaction finish; never kill dpkg.
+    waited=0
     while fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
         || fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
         || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 \
         || fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+        if [ "$waited" -ge 600 ]; then
+            echo "Timed out waiting for package locks" >&2
+            return 1
+        fi
         sleep 5
+        waited=$((waited + 5))
     done
 }
 
@@ -69,34 +124,21 @@ export DEBIAN_FRONTEND="noninteractive"
 wait_for_apt
 retry 5 10 apt-get update
 wait_for_apt
-retry 5 10 apt-get install --no-install-recommends -y \
-    at \
-    vim \
-    uuid \
-    zip \
-    unzip \
-    ipcalc \
-    htop \
-    curl \
-    tree \
-    python3 \
-    python3-pip \
-    python3-venv \
-    gpg \
-    gpg-agent \
-    cron \
-    git
-
-if [ ! -d /opt/venv-gcp-proxy ]; then
-    python3 -m venv /opt/venv-gcp-proxy
+if [ "$PROXY_SOLUTION" = basic-vm ]; then
+    retry 5 10 apt-get install --no-install-recommends -y \
+        ca-certificates curl python3 gpg lsb-release
+else
+    # Legacy solutions still execute their playbooks locally.
+    retry 5 10 apt-get install --no-install-recommends -y \
+        ca-certificates curl python3 python3-pip python3-venv gpg gpg-agent cron git
+    if [ ! -d /opt/venv-gcp-proxy ]; then
+        python3 -m venv /opt/venv-gcp-proxy
+    fi
+    VENV_PYTHON="/opt/venv-gcp-proxy/bin/python"
+    export PATH="/opt/venv-gcp-proxy/bin/:$PATH"
+    "$VENV_PYTHON" -m pip install ansible docker
+    /opt/venv-gcp-proxy/bin/ansible-galaxy collection install community.docker
 fi
-VENV_PYTHON="/opt/venv-gcp-proxy/bin/python"
-export PATH="/opt/venv-gcp-proxy/bin/:$PATH"
-"$VENV_PYTHON" -m pip install --upgrade pip
-"$VENV_PYTHON" -m pip install \
-    ansible \
-    docker
-/opt/venv-gcp-proxy/bin/ansible-galaxy collection install community.docker
 
 SOLUTIONS_DIR="/opt/lightsail-proxy"
 mkdir -p "$SOLUTIONS_DIR"
@@ -159,3 +201,10 @@ case "$PROXY_SOLUTION" in
         exit 1
         ;;
 esac
+
+# Readiness is separate from cloud-init completion on the initial boot.
+uname -r > /var/lib/proxy-bootstrap/kernel-at-provisioning
+touch /var/lib/proxy-bootstrap/complete
+# The original cloud-init user-data is already retained by cloud-init; remove the
+# extra resume copy after successful provisioning.
+rm -f /var/lib/proxy-bootstrap/setup.sh

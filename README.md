@@ -207,3 +207,5 @@ maintenance that requires it, followed by an authenticated proxy check.
 
 This fresh-instance bootstrap does not remove jobs on existing hosts. Proxy
 container logging is configured by the separate proxy deployment repository.
+
+See [disposable proxy VM strategy](docs/disposable-proxy-vms.md) for replacement-based updates, boot readiness and validation.
