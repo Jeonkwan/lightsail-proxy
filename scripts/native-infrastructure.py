@@ -7,26 +7,13 @@ def aws(*args):return json.loads(call('aws','lightsail',*args,'--region','ap-sou
 def tf(*args):subprocess.run(['terraform',*args],check=True)
 def main():
  target=os.environ['TARGET'];op=os.environ['OPERATION'];expected=os.environ.get('EXPECTED_INSTANCE','')
- assert target in ['cream','flatwhite'] and op in ['inspect','create','replace','destroy','authorize']
+ assert target in ['cream','flatwhite'] and op in ['inspect','create','replace','destroy']
  os.environ.pop('TF_WORKSPACE',None)
  # Workspace-specific bootstrap variables must never redirect this operation.
  for k,v in {'instance_customizable_name':target,'subdomain_name':target,'selected_country':'singapore','selected_zone':'a','domain_name':'mokamaker.site','proxy_solution':'basic-vm','playbook_branch':'feature/native-xray'}.items():os.environ['TF_VAR_'+k]=v
  prefix='lightsail-singapore-a-'+target
  before=aws('get-instances')['instances'];selected=[x for x in before if x['name'].startswith(prefix+'-')]
  protected={x['name']:x['publicIpAddress'] for x in before if x not in selected}
- if op=='authorize':
-  assert len(selected)==1 and selected[0]['name']==expected
-  public=os.environ['PUBLIC_KEY'].strip();assert public.startswith(('ssh-ed25519 ','ssh-rsa ','ecdsa-sha2-')) and '\n' not in public
-  access=aws('get-instance-access-details','--instance-name',expected,'--protocol','ssh')['accessDetails']
-  assert access['ipAddress']==selected[0]['publicIpAddress']
-  import tempfile
-  with tempfile.TemporaryDirectory() as tmp:
-   root=pathlib.Path(tmp);key=root/'key';cert=root/'key-cert.pub';key.write_text(access['privateKey']);key.chmod(0o600);cert.write_text(access['certKey']);cert.chmod(0o600)
-   script="import pathlib,os\np=pathlib.Path.home()/'.ssh';p.mkdir(mode=0o700,exist_ok=True);f=p/'authorized_keys';key="+repr(public)+"\nlines=f.read_text().splitlines() if f.exists() else []\nif key not in lines:f.write_text('\\n'.join(lines+[key])+'\\n')\nf.chmod(0o600)\nprint('Deployment public key authorized')"
-   # Only the public key crosses into this operation. AWS-issued temporary
-   # private key and certificate remain protected inside the Actions runner.
-   subprocess.run(['ssh','-i',str(key),'-o','CertificateFile='+str(cert),'-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=accept-new','-o','UserKnownHostsFile='+str(root/'known_hosts'),access['userName']+'@'+access['ipAddress'],'python3 -'],input=script,text=True,check=True,timeout=60)
-  return
  print('Instances:',json.dumps([{k:x.get(k) for k in ['name','publicIpAddress','state','blueprintId']} for x in before]),flush=True)
  tf('init','-input=false','-backend-config=bucket='+os.environ['TF_BACKEND_BUCKET'],'-backend-config=key='+os.environ['TF_BACKEND_KEY'],'-backend-config=region='+os.environ['TF_BACKEND_REGION'])
  workspaces=call('terraform','workspace','list').replace('*','').split()
