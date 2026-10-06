@@ -6,26 +6,26 @@ flatwhite acceptance](podman-xray.md).
 
 Provision a `basic-vm` with Lightsail first, then deploy from the Ansible controller
 using `Jeonkwan/less-vision-reality`. Runtime selection belongs to proxy deployment,
-not Terraform/bootstrap. Basic provisioning stays minimal for either runtime and
+not Terraform/bootstrap. Basic provisioning stays minimal for every runtime and
 performs its one controlled reboot before marking bootstrap ready. Proxy deployment
 never installs Ansible on the VM or schedules a reboot.
 
-Both runtime defaults are now 26.3.27. Docker 25.10.15 remains an explicit reviewed
+All runtime defaults are 26.3.27. Docker and Podman 25.10.15 remains an explicit reviewed
 rollback (`-e xray_container_image_version=25.10.15` / Actions
 `container_image_version=25.10.15`); diagnostics must select that same version.
-The version fields remain separate so a native rollback does not silently change Docker.
+The version fields remain separate so a native rollback does not silently change either container runtime.
 
 ## Defaults and contract
 
-| Setting | Native | Docker |
-| --- | --- | --- |
-| `xray_deployment_mode` / Actions `deployment_mode` | `native` (default) | `docker` |
-| Version | `xray_binary_version=26.3.27`; reviewed `25.10.15` available | `xray_container_image_version=26.3.27` |
-| Actions version input | `xray_version=26.3.27` (native binary only) | `container_image_version=26.3.27` |
-| Runtime | verified official archive binary, dedicated unprivileged `xray` account | official `ghcr.io/xtls/xray-core:26.3.27`, Compose |
-| Config | `/usr/local/etc/xray/config.json`, root:xray 0640 | `/opt/xray/config/config.json`, root:65532 0640 |
-| Runtime files | `/usr/local/bin/xray`, `/etc/systemd/system/xray.service` | `/opt/xray/docker-compose.yml`; Compose project/service `xray` |
-| Logs | journald; no text logs/logrotate | json-file, 10 MB × three files |
+| Setting | Native | Docker | Podman |
+| --- | --- | --- | --- |
+| `xray_deployment_mode` / Actions `deployment_mode` | `native` (default) | `docker` | `podman` |
+| Version | `xray_binary_version=26.3.27`; reviewed `25.10.15` | `xray_container_image_version=26.3.27`; reviewed `25.10.15` | Same reviewed container version setting |
+| Actions version input | `xray_version=26.3.27` | `container_image_version=26.3.27` | `container_image_version=26.3.27` |
+| Runtime | verified official archive, dedicated `xray` account | official Xray image, Compose | official Xray image, rootful Podman; process UID/GID 65532 |
+| Config | `/usr/local/etc/xray/config.json`, root:xray 0640 | `/opt/xray/config/config.json`, root:65532 0640 | `/opt/xray-podman/config/config.json`, root:65532 0640 |
+| Runtime files | `/usr/local/bin/xray`, `xray.service` | `/opt/xray/docker-compose.yml`; Compose project/service `xray` | `/opt/xray-podman`; `xray-podman.service` and container `xray-podman` |
+| Logs | journald | json-file, 10 MB × three files | journald |
 
 All modes share the same VLESS/REALITY settings, credentials and host policy.
 Host journald uses persistent 100 MB, runtime 32 MB, 10 MB files, seven-day
@@ -56,6 +56,8 @@ ansible-playbook -i /path/to/inventory.yml ansible/site.yml \
   -e xray_deployment_mode=native -e xray_binary_version=26.3.27
 ansible-playbook -i /path/to/inventory.yml ansible/site.yml \
   -e xray_deployment_mode=docker -e xray_container_image_version=26.3.27
+ansible-playbook -i /path/to/inventory.yml ansible/site.yml \
+  -e xray_deployment_mode=podman -e xray_container_image_version=26.3.27
 ```
 
 `XRAY_DEPLOYMENT_MODE` is the environment equivalent; `-e` takes precedence. Native

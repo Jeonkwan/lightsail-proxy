@@ -59,3 +59,15 @@ exact recorded Flatwhite identity and owned resources/empty workspace, then park
 flatwhite.mokamaker.site at 127.0.0.1. Preserve shared environments/secrets/backends.
 This supersedes earlier completed task scopes for Flatwhite only. No merge or
 release is authorized by this implementation/testing instruction.
+
+
+Podman task completed on 2026-10-06. Focused acceptance and forwarding-hook follow-up
+passed; see docs/podman-runtime-validation.md. Disposable
+`lightsail-singapore-a-flatwhite-20261006051026` (`18.141.16.60`) and all owned
+resources/empty workspace are removed; flatwhite DNS resolves to 127.0.0.1.
+Decaf/Cream identities and addresses were preserved. Retain shared credentials and
+backends. This completed test scope is evidence, not standing authorization for
+future mutations. Podman ownership includes a private atomic forwarding record
+and one DNAT-only IPv4 TCP 443 rule; never flush rules or change global policy.
+Lifecycle activation tags cannot bypass normal candidate-validated switching.
+Merge and release remain separate owner decisions.

@@ -8,7 +8,7 @@ proxy_solution or bootstrap runtime installation is added.
 ## Runtime contract
 
 Initial support is Ubuntu 24.04/systemd x86-64 with rootful distribution Podman
-4.9 or newer and cgroup v2. Install Podman, netavark and aardvark-dns only when
+4.9 or newer and cgroup v2. Install Podman, netavark, aardvark-dns and iptables only when
 this mode is selected. No Docker CE, Docker compatibility socket/alias, Compose,
 Python Docker SDK or Galaxy collection is required on a fresh Podman host.
 Existing engine packages are retained after switches.
@@ -25,10 +25,21 @@ recovery; an intentional systemctl stop does not restart the container. Disable
 the service when switching away so it stays stopped across host reboot. Native
 `xray.service`, Docker Compose `xray`, and Podman `xray-podman` are distinct.
 
-The Xray process runs as UID/GID 65532 with no new privileges and all capabilities
-dropped. Its private network namespace permits binding its container port 443
+The Xray process runs as UID/GID 65532 with all capabilities dropped. Default
+AppArmor/seccomp confinement stays enabled. Ubuntu 24.04 crun/AppArmor stacking
+can deny TCP creation with the optional no-new-privileges flag (Ubuntu bug
+[2118824](https://bugs.launchpad.net/ubuntu/+source/libpod/+bug/2118824)); this mode
+omits that flag and does not alter global AppArmor policy. Validate actual TCP
+startup and zero effective/permitted/bounding capabilities, not only config parsing.
+Its private network namespace permits binding its container port 443
 using an explicit namespace sysctl; bridge networking publishes TCP 443. The
-service does not use host networking or privileged containers. Configuration is
+service does not use host networking or privileged containers. Systemd installs a
+single owned IPv4 forwarding allowance after startup, restricted to this container's
+address, TCP 443 and DNAT traffic. It removes that exact rule on stop/failed startup,
+using a private atomic `forwarding.json` ownership record. This keeps published
+traffic working when a retained Docker daemon sets FORWARD policy to DROP after
+reboot. No global policy changes, rule flushes or unrelated forwarding rules are
+issued by this helper. Configuration is
 `/opt/xray-podman/config/config.json`, root:65532 0640, with a read-only bind mount.
 The deployment root and ownership helper are root-only. Podman's journald log
 driver uses existing host retention: persistent 100 MB, runtime 32 MB, 10 MB files,
@@ -68,7 +79,9 @@ Changed configuration or image replaces only the recorded owned container.
 `--tags xray_down` stops the selected service; `xray_reload` restarts it;
 `xray_recreate` recreates only the inspected existing Podman container with its
 reviewed image version and existing config. Lifecycle tags do not install packages
-or stage deployment candidates. Restore a stopped service through normal deployment.
+or stage deployment candidates. Activation tags refuse an opposite active/enabled
+runtime even with switch opt-in; switch through normal deployment first. Restore a
+stopped service through normal deployment.
 
 ## Focused validation and scope
 
@@ -90,8 +103,14 @@ conditions also have executable local tests.
 `resume_spare=true` is only for a failed attempt after fresh footprint evidence was
 already recorded. Run explicit target client checks: no peer fallback is permitted.
 Runner transport checks do not establish complete iOS TUN/DNS/mobile behavior.
+After earlier gates have recorded evidence, `stage=validate-podman-final` with
+`resume_spare=true` runs only the affected forwarding-hook follow-up: unchanged
+deployment, stop/rule cleanup, crash recovery, native switch cleanup/return, and
+reboot/client inspection while retaining unrelated forwarding rules.
 
 After acceptance, destroy the exact recorded flatwhite instance and owned static
 IP/key/snapshots, delete its empty workspace, and park flatwhite.mokamaker.site at
 127.0.0.1. Keep shared credentials/backends. Merge and release need separate owner
-instructions. See the validation record for actual results and run links.
+instructions. The authorized flatwhite acceptance and teardown completed on 2026-10-06.
+See the [Podman validation record](podman-runtime-validation.md) for actual results
+and run links.
