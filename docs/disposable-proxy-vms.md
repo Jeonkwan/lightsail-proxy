@@ -41,3 +41,10 @@ Keep Cream on success, retire exact Flat White and preserve Decaf. No additional
 reboot/failure/log-injection suite or soak is required for that version alignment.
 See [runtime validation and current nodes](selectable-runtime-validation.md) for
 current identities, evidence and cleanup.
+
+
+For the additional Podman mode, systemd supervises a rootful container running
+unprivileged Xray, with the same bounded host journald policy and no automatic
+runtime updates. The current owner-selected flatwhite scope and focused checks
+are documented in [Podman runtime](podman-xray.md); earlier retirement records
+remain historical evidence.

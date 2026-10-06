@@ -1,5 +1,9 @@
 # Selectable runtime validation
 
+For the additional Podman mode and owner-selected disposable flatwhite validation
+on 2026-10-06, see the [Podman validation record](podman-runtime-validation.md).
+The historical records below remain evidence for earlier completed tasks.
+
 Current serving nodes after the authorized replacement (2026-10-05):
 
 | Node | Instance | Address | Runtime |
