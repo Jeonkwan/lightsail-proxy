@@ -114,3 +114,14 @@ Read [disposable VM strategy](disposable-proxy-vms.md) and
 
 See [runtime validation and current nodes](selectable-runtime-validation.md) for
 Cream replacement acceptance, historical spare evidence and cleanup scope.
+
+## Podman development
+
+See [Podman runtime](podman-xray.md). Use feature/podman-runtime for this change.
+Run `python3 scripts/tests/test_podman.py` in the sibling proxy repository and repeat the
+Ansible syntax check with `-e xray_deployment_mode=podman`. The proxy CI matrix
+covers all three modes. The affected image test `scripts/tests/test_podman_config.py`
+requires controller-side sudo/rootful Podman and checks both reviewed versions.
+On Ubuntu 24.04 install Podman, netavark and aardvark-dns; no Compose provider or
+Docker compatibility package is needed. The live harness `scripts/podman-validation.py`
+refuses targets other than flatwhite. Credentials remain in Actions.

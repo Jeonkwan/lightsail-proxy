@@ -1,5 +1,9 @@
 # Selectable Xray runtime
 
+The additional `podman` mode uses rootful Podman supervised by systemd, without
+Docker CE or Compose. Native remains the default. See [Podman contract and focused
+flatwhite acceptance](podman-xray.md).
+
 Provision a `basic-vm` with Lightsail first, then deploy from the Ansible controller
 using `Jeonkwan/less-vision-reality`. Runtime selection belongs to proxy deployment,
 not Terraform/bootstrap. Basic provisioning stays minimal for either runtime and
@@ -23,7 +27,7 @@ The version fields remain separate so a native rollback does not silently change
 | Runtime files | `/usr/local/bin/xray`, `/etc/systemd/system/xray.service` | `/opt/xray/docker-compose.yml`; Compose project/service `xray` |
 | Logs | journald; no text logs/logrotate | json-file, 10 MB × three files |
 
-Both modes share the same VLESS/REALITY settings, credentials and host policy.
+All modes share the same VLESS/REALITY settings, credentials and host policy.
 Host journald uses persistent 100 MB, runtime 32 MB, 10 MB files, seven-day
 retention and no syslog forwarding. Validate retained disk usage with allocated
 blocks (`st_blocks * 512`, matching `journalctl --disk-usage`), because archived
@@ -75,7 +79,7 @@ gh workflow run deploy.yml --repo Jeonkwan/less-vision-reality \
 ```
 
 The reusable workflow exposes the same selection as a string and rejects invalid
-values. Manual dispatch exposes a native/docker choice. No secrets need exporting
+values. Manual dispatch exposes a native/docker/podman choice. No secrets need exporting
 from GitHub Actions. Keep the existing infrastructure `terraform-deploy.yml` intact;
 its `proxy_solution=basic-vm` prepares the host, not an Xray runtime. The guarded
 `native-infrastructure.yml` becomes registered when this PR chain merges into main;
@@ -85,12 +89,14 @@ it and the optional selected-host path provision a basic VM for either runtime.
 
 First select one host (`--limit` for multi-host inventories), preserve a healthy
 peer, and record diagnostics/client results and current versions. A runtime switch
-has a brief interruption. Opposite active Docker containers or active/enabled native
+has a brief interruption. Opposite active Docker containers or active/enabled native or Podman
 services require `xray_allow_runtime_switch=true`; Actions uses
 `allow_runtime_switch=true`. Inactive retained artifacts do not require opt-in on
 normal repeats. Ownership is checked before deployment: native unit content and
-paths, or Docker Compose labels, working directory, config file and bind mount.
-Ambiguous units/containers/configuration fail closed. Docker daemon errors are not
+paths, Docker Compose labels, working directory, config file and bind mount, or the
+Podman marker/service/labels and reviewed mount/network/logging contract.
+Ambiguous units/containers/configuration fail closed. Engine inspection also rejects
+unrelated published ports even when NAT has no userspace listener. Docker daemon errors are not
 interpreted as absence; an installed daemon must be inspectable. Unrelated port
 listeners cause failure; deployment never removes them.
 

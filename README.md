@@ -238,3 +238,12 @@ journald logs. See [native deployment](docs/native-xray.md). Use `basic-vm` for 
 minimal host and deploy the proxy from the companion repository's Actions runner.
 
 See [Americano/Latte validation and cleanup](docs/selectable-runtime-validation.md) for the task scope and evidence.
+
+
+### Additional Podman runtime
+
+Select `deployment_mode=podman` in proxy Actions or
+`xray_deployment_mode=podman` in controller-side Ansible. Rootful Podman uses a
+separate systemd-supervised container, without Docker CE or Compose. Native
+remains the default; existing Docker mode stays available. See the
+[Podman runtime and switching contract](docs/podman-xray.md).

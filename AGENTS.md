@@ -47,3 +47,15 @@ resources/workspace are removed and DNS is parked at 127.0.0.1. Retain the share
 Actions environment/secrets despite its historical name `flatwhite`. Any later
 cloud mutation needs a new owner-selected scope; these records are evidence, not
 permission to redeploy serving nodes or repeat retirement. See the validation record.
+
+
+Current task scope (2026-10-06): owner approved adding rootful Podman as a third
+runtime, without rootless/Compose support. Read docs/podman-xray.md. Keep native
+as default and preserve Docker. Work on feature/podman-runtime. Tests focus on
+new/modified runtime ownership, candidate validation, switching/recovery and Podman
+lifecycle. Flatwhite may be created/redeployed/destroyed and recreated as needed;
+Decaf and Cream are excluded from mutations. After acceptance destroy only the
+exact recorded Flatwhite identity and owned resources/empty workspace, then park
+flatwhite.mokamaker.site at 127.0.0.1. Preserve shared environments/secrets/backends.
+This supersedes earlier completed task scopes for Flatwhite only. No merge or
+release is authorized by this implementation/testing instruction.
